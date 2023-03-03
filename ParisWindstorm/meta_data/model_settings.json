@@ -1,0 +1,20 @@
+{
+    "model_settings":{
+        "event_set":{
+            "name": "Event Set",
+            "desc": "Event Set",
+            "default": "",
+            "options":[]
+         },
+        "event_occurrence_id":{
+            "name": "Occurrence Set",
+            "desc": "Occurrence selection",
+            "default": "",
+            "options":[]
+        }
+    },
+    "lookup_settings":{},
+    "data_settings": {
+        "group_fields": ["PortNumber", "AccNumber", "LocNumber"]
+    }
+}

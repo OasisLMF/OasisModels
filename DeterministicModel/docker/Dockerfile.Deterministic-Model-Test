@@ -1,0 +1,8 @@
+FROM coreoasis/model_worker:1.15.13
+
+ARG BASE_DIR=/home/worker/model/
+COPY src/keys_server/DeterministicKeysLookup.py $BASE_DIR/src/keys_server/DeterministicKeysLookup.py
+COPY oasislmf_deploy.json $BASE_DIR/oasislmf.json
+COPY meta-data/model_settings.json $BASE_DIR/meta-data/model_settings.json
+
+ENTRYPOINT /home/worker/startup.sh
