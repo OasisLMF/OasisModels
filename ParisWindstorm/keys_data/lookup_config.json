@@ -1,43 +1,46 @@
 {
     "model": {
         "supplier_id": "OasisLMF",
-        "model_id": "PiWind",
-        "model_version": "0.0.0.1"
+        "model_id": "ParisWindstorm",
+        "model_version": "1.1.0"
     },
-    "builtin_lookup_type": "new_lookup",
+    "lookup_module_path": "bespoke_keys.py",
     "keys_data_path": "./",
     "step_definition": {
         "peril":{
             "type": "rtree",
             "columns": ["latitude", "longitude"],
             "parameters": {
-                "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict.csv",
-                "file_type": "csv",
+                "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict.parquet",
+                "file_type": "parquet",
                 "id_columns": ["area_peril_id"], 
-                "nearest_neighbor_min_distance": -1
+                "nearest_neighbor_min_distance": 10
             }
         },
         "split_loc_perils_covered":{
             "type": "split_loc_perils_covered" ,
             "columns": ["locperilscovered"],
             "parameters": {
-                "model_perils_covered": ["WTC", "WSS"]
+                "model_perils_covered": ["WTC"]
             }
         },
         "create_coverage_type": {
             "type": "simple_pivot",
             "parameters": {
-                "pivots": [{"new_cols": {"coverage_type": 1}},
-                           {"new_cols": {"coverage_type": 3}}]
+                "pivots": [{"new_cols": {"coverage_type": 1}}]
             }
         },
         "vulnerability": {
             "type": "merge",
-            "columns": ["peril_id", "coverage_type", "occupancycode"],
+            "columns": ["peril_id", "coverage_type", "constructioncode", "heightcategory"],
             "parameters": {"file_path": "%%KEYS_DATA_PATH%%/vulnerability_dict.csv",
                            "id_columns": ["vulnerability_id"]
                           }
+        },
+        "height_category":{
+            "type": "height_category",
+            "columns": ["numberofstoreys", "buildingheight"]
         }
     },
-    "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "vulnerability"]
+    "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "height_category", "vulnerability"]
 }
