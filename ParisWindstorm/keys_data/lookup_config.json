@@ -4,7 +4,7 @@
         "model_id": "ParisWindstorm",
         "model_version": "1.1.0"
     },
-    "builtin_lookup_type": "new_lookup",
+    "lookup_module_path": "bespoke_keys.py",
     "keys_data_path": "./",
     "step_definition": {
         "peril":{
@@ -32,11 +32,15 @@
         },
         "vulnerability": {
             "type": "merge",
-            "columns": ["peril_id", "coverage_type", "constructioncode"],
+            "columns": ["peril_id", "coverage_type", "constructioncode", "heightcategory"],
             "parameters": {"file_path": "%%KEYS_DATA_PATH%%/vulnerability_dict.csv",
                            "id_columns": ["vulnerability_id"]
                           }
+        },
+        "height_category":{
+            "type": "height_category",
+            "columns": ["numberofstoreys", "buildingheight"]
         }
     },
-    "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "vulnerability"]
+    "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "height_category", "vulnerability"]
 }
