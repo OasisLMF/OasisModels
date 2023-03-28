@@ -1,0 +1,2 @@
+PortNumber,AccNumber,LocNumber,IsTenant,BuildingID,CountryCode,Latitude,Longitude,StreetAddress,PostalCode,OccupancyCode,ConstructionCode,LocPerilsCovered,BuildingTIV,OtherTIV,ContentsTIV,BITIV,LocCurrency,OEDVersion,NumberOfBuildings
+1,A11111,1.00E+11,1,1,GB,,,,LE13 1DX,1000,5000,WSS,100000,0,25000,10000,GBP,2.0.0,4
