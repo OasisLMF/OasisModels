@@ -1,5 +1,0 @@
-{
-    "currency_conversion_type": "DictBasedCurrencyRates",
-    "source_type": "csv",
-    "file_path": "tests/inputs/roe.csv"
-}
