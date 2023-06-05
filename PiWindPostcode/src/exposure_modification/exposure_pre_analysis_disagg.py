@@ -43,7 +43,9 @@ class ExposurePreAnalysis:
     def run(self):
 
         location_df = self.exposure_data.location.dataframe
-        df_built_env = pd.read_csv('src/exposure_modification/OEDLocBuiltEnv.csv')
+
+        # access custom CSV file defined in exposure_pre_analysis_settings file
+        df_built_env = pd.read_csv(self.exposure_pre_analysis_setting['Built_environment'])
 
         # Fill source location file defaults for disaggregation
 
