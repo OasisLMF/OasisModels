@@ -12,6 +12,10 @@ The method of generating the aggregate footprint is detailed below, along with d
 
 You can clone this repository from <a href="https://github.com/OasisLMF/OasisModels" target="_blank">GitHub</a>.
 
+# Compatibility
+
+OasisLMF 1.27.2 and later
+
 ## Running via the Oasis MDK
 
 The <a href="https://pypi.org/project/oasislmf/" target="_blank">Oasis model development kit (MDK)</a> is a Python package which provides a command line interface (CLI) for developing and running models using the Oasis framework. It can be installed via the Python package installer `pip` (or `pip3` for Python 3). The PiWindPostcode model contains a <a href="https://github.com/OasisLMF/OasisModels/PiWindPostcode/blob/master/oasislmf.json" target="_blank">JSON configuration file</a> that allows the PiWind model to be run via the MDK.
@@ -137,6 +141,8 @@ This routine demonstrates how the model provider can augment the source location
 An example test can be ran tests/test_4.
 
 ## Kernel disaggregation feature
+
+(This feature is work in progress and estimated for completion in 1.28 in July 2023 - please check back again later)
 
 In order to avoid large aggregate portfolios being fully disaggregated pre-analysis (which can produce very big location files and slow down file preparation runtime) Oasis has a feature which disaggregates locations with identical risk characteristics and multiple buildings into individual buildings in the kernel for the purposes of loss sampling.  This means that the aggregate risks are not treated as one (with perfectly correlated losses) and the risk profile of the portfolio is represented more realistically.  
 
