@@ -12,7 +12,7 @@ The method of generating the aggregate footprint is detailed below, along with d
 
 You can clone this repository from <a href="https://github.com/OasisLMF/OasisModels" target="_blank">GitHub</a>.
 
-# Compatibility
+## Compatibility
 
 OasisLMF 1.27.2 and later
 
