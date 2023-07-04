@@ -11,8 +11,8 @@
             "type": "rtree",
             "columns": ["latitude", "longitude"],
             "parameters": {
-                "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict.csv",
-                "file_type": "csv",
+                "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict.parquet",
+                "file_type": "parquet",
                 "id_columns": ["area_peril_id"], 
                 "nearest_neighbor_min_distance": -1
             }
