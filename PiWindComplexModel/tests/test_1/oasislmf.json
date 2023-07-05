@@ -1,10 +1,13 @@
 {
     "analysis_settings_json": "analysis_settings.json",
     "lookup_data_dir": "../../keys_data",
-    "lookup_module_path": "../../src/complex_model_wrapper/PiWindComplexModelKeysLookup.py",
+    "lookup_module_path": "../../complex_model_wrapper/PiWindComplexModelKeysLookup.py",
     "model_data_dir": "../../model_data",
     "model_version_csv": "../../keys_data/ModelVersion.csv",
     "oed_accounts_csv": "SourceAccOEDPiWind.csv",
-    "oed_location_csv": "SourceLocOEDPiWind.csv",
-    "model_package_dir": "../..src/model_execution_worker"
+    "oed_location_csv": "SourceLocOEDPiWind10.csv",
+    "model_package_dir": "../../src/model_execution_worker",
+    "gulpy": false,
+    "gulmc": false,
+    "modelpy": false
 }

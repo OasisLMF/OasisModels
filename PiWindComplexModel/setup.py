@@ -1,5 +1,5 @@
 from setuptools import setup
-import src.complex_model_wrapper
+import complex_model_wrapper
 import oasislmf.utils 
 
 setup(
@@ -7,7 +7,7 @@ setup(
     version='1.0.0.0',
     entry_points={
         'console_scripts': [
-            'OasisLMF_ComplexModelExample_gulcalc=src.complex_model_wrapper.OasisLMF_ComplexModelExample_gulcalc:main'
+            'OasisLMF_ComplexModelExample_gulcalc=complex_model_wrapper.OasisLMF_ComplexModelExample_gulcalc:main'
         ]
     }
 )
