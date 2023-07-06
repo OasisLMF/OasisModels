@@ -11,7 +11,7 @@ This is very small, single peril model used for demonstration of how to build a 
 ## PiWind
 This is the original test model in Oasis and is an example of a multi-peril model implementation representing ficticious events with wind and flood affecting the Town of Melton Mowbray in England.
 
-## PiWindi Complex Model
+## PiWind Complex Model
 This is a version of the PiWind model which uses the complex model integreation approach to generate ground up losses in a custoim module, which then sits in the workflow and replaces the standard ground up loss calculation from Oasis
 
 ## PiWind Postcode
