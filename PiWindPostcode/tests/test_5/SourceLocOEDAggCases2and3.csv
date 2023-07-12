@@ -1,0 +1,3 @@
+PortNumber,AccNumber,LocNumber,CountryCode,Latitude,Longitude,StreetAddress,PostalCode,OccupancyCode,ConstructionCode,LocPerilsCovered,BuildingTIV,OtherTIV,ContentsTIV,BITIV,LocCurrency,OEDVersion,NumberOfBuildings,IsAggregate,LocDed1Building,LocDedType1Building
+1,A11111,Case2,GB,,,,LE13 0AA,1050,5000,WTC,4000000,0,0,0,GBP,2.0.0,2,1,1000,0
+1,A11111,Case3,GB,,,,LE13 0DB,1150,5000,WTC,3000000,0,0,0,GBP,2.0.0,2,0,1000,0
