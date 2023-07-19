@@ -149,7 +149,7 @@ Each location is split into a number of risks based on the value of NumberOfBuil
 The value of IsAggregate determines how the financial terms are applied.
 
 If IsAggregate=0 (default), the location is treated as a single site with 1 or more buildings and location financial terms apply to the site, i.e. they are not disaggregated.
-If IsAggregate=1, the location is treated be an aggregate risk and the financial terms are split and applied per disaggregated risk. All subrisks are assigned the same deductibles and/or limits.
+If IsAggregate=1, the location is treated as an aggregate risk and the financial terms are split equally and applied per disaggregated risk. All subrisks are assigned the same deductibles and/or limits.
 
 An example test can be ran tests/test_5.
 
