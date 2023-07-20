@@ -14,7 +14,7 @@ You can clone this repository from <a href="https://github.com/OasisLMF/OasisMod
 
 ## Compatibility
 
-OasisLMF 1.27.2 and later
+OasisLMF 1.28.0 and later
 
 ## Running via the Oasis MDK
 
@@ -142,10 +142,24 @@ An example test can be ran tests/test_4.
 
 ## Kernel disaggregation feature
 
-(This feature is work in progress and estimated for completion in 1.28 in July 2023 - please check back again later)
-
 In order to avoid large aggregate portfolios being fully disaggregated pre-analysis (which can produce very big location files and slow down file preparation runtime) Oasis has a feature which disaggregates locations with identical risk characteristics and multiple buildings into individual buildings in the kernel for the purposes of loss sampling.  This means that the aggregate risks are not treated as one (with perfectly correlated losses) and the risk profile of the portfolio is represented more realistically.  
 
-Each aggregate risk is split into a number of risks based on the value of NumberOfBuildings (where it is >1) with TIV distributed equally to the subrisks for each coverage.  Location deductibles and limits are converted into % TIV values (Ded/LimitType = 2) and all subrisks are assigned the same % deductibles and/or limits.
+Each location is split into a number of risks based on the value of NumberOfBuildings (where it is >1) with TIV distributed equally to the disaggregated risks for each coverage.  
+
+The value of IsAggregate determines how the financial terms are applied.
+
+If IsAggregate=0 (default), the location is treated as a single site with 1 or more buildings and location financial terms apply to the site, i.e. they are not disaggregated.
+If IsAggregate=1, the location is treated as an aggregate risk and the financial terms are split equally and applied per disaggregated risk. All subrisks are assigned the same deductibles and/or limits.
 
 An example test can be ran tests/test_5.
+
+The location file has the following locations covering all 6 cases of NumberOfBuildings (0,1 or >1) and IsAggregate (0 or 1).
+
+| LocNumber | LocName                             | NumberOfBuildings| IsAggregate | TIV disaggregated? | Financial terms disaggregated? |
+|:----------|-------------------------------------|------------------| ------------|--------------------|-------------------------------:|
+| Case1     | Single location (default)           |    1             | 0           |      no            |         no                     |   
+| Case2     | Aggregate risk, 2 locations         |    2             | 1           |      yes           |         yes                    |
+| Case3     | Campus site,  4 buildings           |    4             | 0           |      yes           |         no                     |
+| Case4     | Aggregate risk, unknown # locations |    0             | 1           |      no            |         no                     |
+| Case5     | Campus site,  unknown # buildings   |    0             | 0           |      no            |         no                     |
+| Case6     | Aggregate risk, 1 location          |    0             | 1           |      no            |         no                     |
