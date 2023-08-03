@@ -5,7 +5,7 @@
     "model_data_dir": "../../model_data",
     "model_version_csv": "../../keys_data/ModelVersion.csv",
     "oed_accounts_csv": "SourceAccOEDPiWind.csv",
-    "oed_location_csv": "SourceLocOEDPiWind10.csv",
+    "oed_location_csv": "SourceLocOEDPiWind.csv",
     "model_package_dir": "../../src/model_execution_worker",
     "gulpy": false,
     "gulmc": false,
