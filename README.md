@@ -21,7 +21,7 @@ This is a version of the PiWind model which uses the complex model integreation 
 This is a variant of the original PiWind model designed for running exposures whose locations are known at postcode level rather than by latitude and longitude. This model demonstrates the disaggregation features of Oasis.
 
 ## PiWind Post Loss Amplification
-This is a version of the PiWind model with post loss amplification factors applied. Major catastrophic events can give rise to inflated and deflated costs depending on that specific situation. To account for this, the ground up losses produced by the GUL calculation component are multiplied by post loss amplification factors, by the component plapy.
+This is a version of the PiWind model with post loss amplification factors applied. Major catastrophic events can give rise to inflated and/or deflated costs depending on that specific situation. To account for this, the ground up losses produced by the GUL calculation component are multiplied by post loss amplification factors, by the component plapy.
 
 ## PiWind Single Peril
 This is a simplified variant of the original PiWind model which has single peril (wind only) and would be a good basis for a single peril model in Oasis
