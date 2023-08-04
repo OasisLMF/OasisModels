@@ -2,6 +2,5 @@
 
 # Oasis PiWind Absolute Damage
 
-This is an example for testing Absolute Damage ontop of the PiWind model. 
+The absolute damage option allows model providers to include absolute damage amounts rather than damage factors in the damage bin dictionary. If the damage factors are less than or equal to 1 in the damage bin dictionary, the factor will be applied as normal during the loss calculation, by applying the sampled damage factor to the TIV to give a simulated loss; but with absolute damage factors, where the factor is greater than 1, the TIV is not used in the calculation at all, but rather the absolute damage is applied as the loss.
 
-More information about Absolute Damage can be found here <INSERT LINK>.

@@ -12,7 +12,7 @@ This is very small, single peril model used for demonstration of how to build a 
 This is the original test model in Oasis and is an example of a multi-peril model implementation representing ficticious events with wind and flood affecting the Town of Melton Mowbray in England.
 
 ## PiWind Absolute Damage
-
+This model expands upon the PiWind model with the absolute damage option. This option allows model providers to include absolute damage amounts rather than damage factors in the damage bin dictionary. If the damage factors are less than or equal to 1 in the damage bin dictionary, the factor will be applied as normal during the loss calculation, by applying the sampled damage factor to the TIV to give a simulated loss; but with absolute damage factors, where the factor is greater than 1, the TIV is not used in the calculation at all, but rather the absolute damage is applied as the loss.
 
 ## PiWind Complex Model
 This is a version of the PiWind model which uses the complex model integreation approach to generate ground up losses in a custoim module, which then sits in the workflow and replaces the standard ground up loss calculation from Oasis
