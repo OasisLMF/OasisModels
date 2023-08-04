@@ -32,7 +32,7 @@
         "gul_threshold": 0,
         "model_settings": {
          },
-        "model_version_id": "ParisWindstorm",
-        "module_supplier_id": "OasisLMF",
+        "model_name_id": "ParisWindstorm",
+        "model_supplier_id": "OasisLMF",
         "number_of_samples": 10
 }
