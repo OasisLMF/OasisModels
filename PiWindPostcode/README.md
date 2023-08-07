@@ -8,6 +8,8 @@ This model includes 'aggregate' footprints which are defined at postcode resolut
 
 The method of generating the aggregate footprint is detailed below, along with different features that can be used to handle spatial correlation, unknown vulnerability attributes and disaggregation of aggregate exposure data.
 
+More information on disaggregation can be found [here](https://oasislmf.github.io/sections/disaggregation.html).
+
 ## Cloning the repository
 
 You can clone this repository from <a href="https://github.com/OasisLMF/OasisModels" target="_blank">GitHub</a>.

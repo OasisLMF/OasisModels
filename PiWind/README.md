@@ -3,3 +3,7 @@
 # PiWind
 
 This is the original test model in Oasis and is an example of a multi-peril model implementation representing ficticious events with wind and flood affecting the Town of Melton Mowbray in England.
+
+More information on PiWind be found [here](https://oasislmf.github.io/sections/Oasis-models.html#piwind-toy-model).
+
+The Oasis PiWind repository is availible [here](https://github.com/OasisLMF/OasisPiWind).
