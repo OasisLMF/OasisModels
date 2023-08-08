@@ -1,2 +1,2 @@
-PortNumber,AccNumber,LocNumber,IsTenant,BuildingID,CountryCode,Latitude,Longitude,StreetAddress,PostalCode,OccupancyCode,ConstructionCode,LocPerilsCovered,BuildingTIV,OtherTIV,ContentsTIV,BITIV,LocCurrency,OEDVersion
-1,A11111,100030535219,1,1,GB,52.7658503,-0.8832562,1 BENTLEY STREET,LE13 1LY,1120,5204,WSS,150000,0,37500,15000,GBP,2.0.0
+PortNumber,AccNumber,LocNumber,IsTenant,BuildingID,CountryCode,StreetAddress,PostalCode,OccupancyCode,ConstructionCode,LocPerilsCovered,BuildingTIV,OtherTIV,ContentsTIV,BITIV,LocCurrency,OEDVersion
+1,A11111,100030535219,1,1,GB,1 BENTLEY STREET,LE13 1LY,1120,5204,WSS,150000,0,37500,15000,GBP,2.0.0
