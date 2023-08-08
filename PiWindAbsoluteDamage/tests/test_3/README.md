@@ -1,3 +1,3 @@
-## Test 2
+## Test 3
 
-This directory is a test for only 10 locations in the PiWindAbsoluteDamage Model.
+This directory is a test for only 1 location in the PiWindAbsoluteDamage Model. Latitude and longitude values have been removed for geocode testing.
