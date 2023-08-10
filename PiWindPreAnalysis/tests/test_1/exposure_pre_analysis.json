@@ -1,4 +1,6 @@
 {
-    "API_URL": "https://apiurl_for_geocoder.com",
-    "API_Key": "<your_key_here>"
+    "Token_URI": "https://api.precisely.com/oauth/token",
+    "Geocode_URI": "https://api.precisely.com/geocode/v1/advanced/geocode",
+    "API_Key": "<<PLACE YOUR API KEY HERE>>",
+    "API_Secret_Key": "<<PLACE YOUR SECRET KEY HERE>>"
 }

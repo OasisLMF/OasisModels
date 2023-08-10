@@ -10,6 +10,6 @@
     "modelpy": true,
     "gulmc": true,
     "gulpy": false,
-    "exposure_pre_analysis_module": "../../src/exposure_modification/exposure_pre_analysis_disagg.py",
+    "exposure_pre_analysis_module": "../../src/exposure_modification/exposure_pre_analysis_geocode.py",
     "exposure_pre_analysis_setting_json": "exposure_pre_analysis.json"
 }
