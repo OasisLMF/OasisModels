@@ -1,5 +1,6 @@
 import base64
 import requests
+import logging
 import pandas as pd
 
 # display all columns of dataframe in terminal with ran
@@ -58,11 +59,11 @@ class ExposurePreAnalysis:
                 "grant_type": "client_credentials"
             }
             response = requests.post(token_uri, headers=headers, data=data)
-            if response.status_code == 200:
+            try:
                 access_token = response.json()["access_token"]
                 return access_token
-            else:
-                print(f"Failed to acquire access token. Status Code: {response.status_code}, Error Message: {response.json()}")
+            except:
+                logging.error(f"Failed to acquire access token. Status Code: {response.status_code}, Error Message: {response.json()}")
                 return None
 
         #  function to geocode with address, postcode, and country
@@ -77,12 +78,13 @@ class ExposurePreAnalysis:
                 "country": country,
             }
             response = requests.get(geocode_uri, headers=headers, params=params)
-            if response.status_code == 200:
+            try:
                 geocode_result = response.json()
                 return geocode_result
-            else:
-                print(f"Geocoding failed. Status Code: {response.status_code}, Error Message: {response.json()}")
+            except:
+                logging.error(f"Geocoding failed. Status Code: {response.status_code}, Error Message: {response.json()}")
                 return None
+                
         
         
 
@@ -90,7 +92,7 @@ class ExposurePreAnalysis:
 
         access_token = acquire_auth_token()
         
-        # check if Geocoder fields are in the datafraem - if not, they are added
+        # check if Geocoder fields are in the dataframe - if not, they are added
         if 'Geocoder' not in location_df.columns:
             location_df['Geocoder'] = None
         if 'GeocodeQuality' not in location_df.columns:
@@ -124,7 +126,7 @@ class ExposurePreAnalysis:
                     location_df.at[idx, 'GeocodeQuality'] = quality
                     
                 else:
-                    print("geocoding fails")
+                    logging.error(f"Geocoding failed. Not enough data in Location file on line {idx}")
             else:
                 pass
 
