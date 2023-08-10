@@ -16,7 +16,7 @@ These are inserted into the Loc file to complete it, along with new Geocode OED 
 
 This complete data is then passed to the model to run.
 
-PLEASE NOTE: Precicely offer three levels of service that correspond to the precision of their Geocode API. This can be changed by altering the "Geocode_URI" key in exposure_pre_analysis_geocode.json. The default is set to 'Advanced' - Precisely's mid-range service. More information on their levels of service can be found [here](https://docs.precisely.com/docs/sftw/precisely-apis/main/en-us/webhelp/apis/Geocode/Geocode/LI_Geo_GET_url.html).
+PLEASE NOTE: Precisely offer three levels of service that correspond to the precision of their Geocode API. This can be changed by altering the "Geocode_URI" key in exposure_pre_analysis_geocode.json. The default is set to 'Advanced' - Precisely's mid-range service. More information on their levels of service can be found [here](https://docs.precisely.com/docs/sftw/precisely-apis/main/en-us/webhelp/apis/Geocode/Geocode/LI_Geo_GET_url.html).
 
 ## Cloning the repository
 
