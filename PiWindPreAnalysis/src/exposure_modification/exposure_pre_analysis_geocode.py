@@ -5,7 +5,7 @@ import pandas as pd
 # display all columns of dataframe in terminal with ran
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
-pd.set_option('display.float_format', '{:.7f}'.format)  # set decimal places that geocoding inserts to dataframe to 7dp
+
 
 class ExposurePreAnalysis:
     """
@@ -89,11 +89,12 @@ class ExposurePreAnalysis:
         # update lat/longs where missing
 
         access_token = acquire_auth_token()
-
-        # TESTING
-        # print dataframe before geocode
-        print("\n Dataframe before geocoding: \n \n", location_df, "\n")
-
+        
+        # check if Geocoder fields are in the datafraem - if not, they are added
+        if 'Geocoder' not in location_df.columns:
+            location_df['Geocoder'] = None
+        if 'GeocodeQuality' not in location_df.columns:
+            location_df['GeocodeQuality'] = 0.0
 
         for idx, row in location_df.iterrows():
             COUNTRYCODE = row['CountryCode']
@@ -103,46 +104,29 @@ class ExposurePreAnalysis:
             # check if lat or lon value in current row is empty 
             if pd.isnull(row['Latitude']) or pd.isnull(row['Longitude']):
 
-                #print current row
-                print(f"Row {idx+1}:")
+                # geocode row for lat and lon
+                geocode_result = geocode_location(access_token, ADDRESS, POSTALCODE, COUNTRYCODE)
+                if geocode_result:
+                    # assign lat and lon, and GeocodePrecision from geocode results
+                    latitude = geocode_result["candidates"][0]["geometry"]["coordinates"][1]
+                    longitude = geocode_result["candidates"][0]["geometry"]["coordinates"][0]
+                    quality = geocode_result["candidates"][0]["precisionLevel"]
+                    # scale quality: 
+                    # Precisely's quality is graded on a scale from 0 to 20. However, the OED's GeocodeQuality is graded as a 
+                    # decimal between 0 and 1. Therefore, the quality needs to be divided by 20 to give a value between 0 and 1.
+                    quality = quality/20
 
-                # checks if top row has Geocoder and GeocodeQuality feilds, then assigns all row with coreesponding values.
-                # if not top row, the dataframe feilds are not amended - as the assign method would override the GeocodeQuality values from 
-                # the preious iterations with Nan if this was the case
-                if idx == 0:
-                    location_df = location_df.assign(Geocoder = 'Precisely', GeocodeQuality = 'NaN')
+                    # insert lat and lon into row with 7dp
+                    location_df.at[idx, 'Latitude'] = '{:.7f}'.format(latitude)
+                    location_df.at[idx, 'Longitude'] = '{:.7f}'.format(longitude)
+                    # add geocode OED field values
+                    location_df.at[idx, 'Geocoder'] = "Precisely"
+                    location_df.at[idx, 'GeocodeQuality'] = quality
+                    
                 else:
-                    pass
-
-            # geocode row for lat and lon
-            geocode_result = geocode_location(access_token, ADDRESS, POSTALCODE, COUNTRYCODE)
-            if geocode_result:
-                # assign lat and lon, and GeocodePrecision from geocode results
-                latitude = geocode_result["candidates"][0]["geometry"]["coordinates"][1]
-                longitude = geocode_result["candidates"][0]["geometry"]["coordinates"][0]
-                quality = geocode_result["candidates"][0]["precisionLevel"]
-                # scale quality: 
-                # Precisely's quality is graded on a scale from 0 to 20. However, the OED's GeocodeQuality is graded as a 
-                # decimal between 0 and 1. Therefore, the quality needs to be divided by 20 to give a value between 0 and 1.
-                quality = quality/20
-
-                # insert lat and lon, and GeocodePrecision into row
-                location_df.at[idx, 'Latitude'] = latitude
-                location_df.at[idx, 'Longitude'] = longitude
-                location_df.at[idx, 'GeocodeQuality'] = quality
-                
-                # TESTING
-                # print results
-                print("Geocoding Result:", geocode_result)
-                # this prints just latitude and longitude
-                print(geocode_result["candidates"][0]["geometry"]["coordinates"])
-                # # this prints the dataframe after each iteration
-                # print(location_df)
+                    print("geocoding fails")
             else:
-                print("geocoding fails")
-        
-        # print dataframe after geocode
-        print("\n Dataframe after geocoding: \n \n", location_df, "\n")
+                pass
 
         # write back updated dataframe to exposure object
         self.exposure_data.location.dataframe = location_df

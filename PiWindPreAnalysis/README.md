@@ -24,7 +24,7 @@ You can clone this repository from <a href="https://github.com/OasisLMF/OasisMod
 
 ## Compatibility
 
-OasisLMF 1.28.0 and later
+OasisLMF 1.27.0 and later
 
 ## Before running the model
 
