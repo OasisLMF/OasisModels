@@ -13,9 +13,9 @@ More information of how to gain your keys can be found [here](https://docs.preci
 
 The location data is then geocoded. The incomplete address data is extracted from the Loc file and passed to Precisely's 
 Geocode API, along with the access token. The API returns a complete version of the addresses which included the lat-long pairs. 
-These are inserted into the Loc file to complete it, along with new Geocode OED fields (if not already present).
+These are inserted into the Loc file to complete it, along with new Geocode OED fields (if not already present). This complete data is then passed to the model to run.
 
-This complete data is then passed to the model to run.
+The example loc file in this model contains 20 locations - the first 20 addresses of the original PiWind location file. Six of the addresses in this loc file have empty Latitude and Longitude fields (addresses 1, 4, 5, 14, 18, 19). Running this model will amend then via geocoding before the analysis. Once the model is run, this can be checked by investigating `runs/losses-<UTC timestamp>/input/location.csv`.
 
 PLEASE NOTE: Precisely offer three levels of service that correspond to the precision of their Geocode API. This can be changed by altering the "Geocode_URI" key in exposure_pre_analysis_geocode.json. The default is set to 'Advanced' - Precisely's mid-range service. More information on their levels of service can be found [here](https://docs.precisely.com/docs/sftw/precisely-apis/main/en-us/webhelp/apis/Geocode/Geocode/LI_Geo_GET_url.html).
 
