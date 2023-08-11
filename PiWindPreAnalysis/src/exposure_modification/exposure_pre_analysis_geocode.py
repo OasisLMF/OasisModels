@@ -3,10 +3,6 @@ import requests
 import logging
 import pandas as pd
 
-# display all columns of dataframe in terminal with ran
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-
 
 class ExposurePreAnalysis:
     """
