@@ -2,7 +2,7 @@
 
 # PiWind Pre-Analysis
 
-The purpose of pre-analysis routines are to provide flexibility to manipulate the OED input files before the model is run, for augmentation as required by the model. These code and cofig are completely customisable; the user can change these to modify the input files in any way they desire to achieve a particular output. The way that this feature has been used in this example model is by integrating an external geocoder.
+The purpose of pre-analysis routines are to provide flexibility to manipulate the OED input files before the model is run, for augmentation as required by the model. The code and cofig are completely customisable; the user can change these to modify input files in any way they desire to achieve a particular output. The way that this feature has been used in this example model is by integrating an external geocoder.
 
 This model amends OED location data that's missing Latitude and Longitude fields, which are needed for the model to 
 yeild accurate results. It uses Precisely's Geocode API to assign the incomplete location addresses lat-long values based on the location data available (street address, postal code, country code, etc.).
