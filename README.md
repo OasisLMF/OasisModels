@@ -23,5 +23,8 @@ This is a variant of the original PiWind model designed for running exposures wh
 ## PiWind Post Loss Amplification
 This is a version of the PiWind model with post loss amplification factors applied. Major catastrophic events can give rise to inflated and/or deflated costs depending on that specific situation. To account for this, the ground up losses produced by the GUL calculation component are multiplied by post loss amplification factors, by the component plapy.
 
+## PiWind Pre Analysis
+This model builds upon the original PiWind model with a pre-analysis adjustment hook. This step allows the user to modify input files before they are processed in the analysis. This functionality is utilised by this model by implementing an external geocoder: this checks the location data before it is analysed for any addresses that are missing OED location data. If an address is found to be incomplete, it is geocoded to fill these gaps.
+
 ## PiWind Single Peril
 This is a simplified variant of the original PiWind model which has single peril (wind only) and would be a good basis for a single peril model in Oasis

@@ -8,9 +8,9 @@ class ExposurePreAnalysis:
     """
     Example of custom module called by oasislmf/model_preparation/ExposurePreAnalysis.py
 
-    This module amends OED location data that's missing Latitude and Longitude fields, which are needed for the model to 
-    run. It used Precisely's Geocode API to assign the incomplete location addresses lat-long values based on the location data 
-    available (street address, postal code, country code, etc.).
+    This model amends OED location data that's missing Latitude and Longitude fields, which are needed for the model to 
+    yeild accurate results. It used Precisely's Geocode API to assign the incomplete location addresses lat-long values based on 
+    the location data available (street address, postal code, country code, etc.).
 
     To use Precisely's API, the module first needs to gain access via an access token. This is achieved by passing your API key and 
     secret key with requests. To run the model, your keys need to be inserted in tests/test_x/exposure_pre_analysis_geocode.json.
