@@ -92,7 +92,7 @@ class ExposurePreAnalysis:
         if 'Geocoder' not in location_df.columns:
             location_df['Geocoder'] = None
         if 'GeocodeQuality' not in location_df.columns:
-            location_df['GeocodeQuality'] = 0.0
+            location_df['GeocodeQuality'] = None
 
         for idx, row in location_df.iterrows():
             COUNTRYCODE = row['CountryCode']
