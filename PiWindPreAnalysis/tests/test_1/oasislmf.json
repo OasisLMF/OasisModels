@@ -1,0 +1,15 @@
+{
+    "analysis_settings_json": "analysis_settings.json",
+    "lookup_config_json": "../../keys_data/lookup_config_postalcode_only.json",
+    "lookup_data_dir": "../../keys_data",
+    "model_data_dir": "../../model_data",
+    "model_settings_json": "../../meta_data/model_settings.json",
+    "oed_location_csv": "SourceLocOEDPiWindGeocode.csv",
+    "oed_accounts_csv": "SourceAccOEDPiWind.csv",
+    "ktools_alloc_rule_gul": 1,
+    "modelpy": true,
+    "gulmc": true,
+    "gulpy": false,
+    "exposure_pre_analysis_module": "../../src/exposure_modification/exposure_pre_analysis_geocode.py",
+    "exposure_pre_analysis_setting_json": "exposure_pre_analysis.json"
+}
