@@ -1,0 +1,9 @@
+ARG OASIS_WORKER_VERSION
+FROM coreoasis/model_worker:$OASIS_WORKER_VERSION
+
+WORKDIR /home/worker
+
+COPY ./docker/oasislmf_deploy.json /home/worker/model/oasislmf.json
+COPY ./meta-data/model_settings.json /home/worker/model/meta-data/model_settings.json
+
+ENTRYPOINT ./startup.sh
