@@ -1,0 +1,44 @@
+location: model_runs/aws_generic
+build_state:
+    bucket: oasislmf-terraform
+    key: eu-west-1/model_run/oasis-piwind/terraform.tfstate
+    region: eu-west-1
+build_variables:
+    aws_access_key: =>aws_access_key
+    aws_secret_access_key: =>aws_secret_access_key
+    subnet_id: =>subnet_id
+    server_security_group: =>security_group_id
+    instance_type: "t2.medium"
+    server_tag: "Piwind api"
+    key_name: "OasisProject"
+    root_block_size: "16"
+model_variables:
+    repository: "git@github.com:OasisLMF/OasisPiWind.git"
+    oasislmf_version: "1.26.3"
+    data_bucket: "oasislmf-model-library-oasis-piwind"
+    data_directory: "/home/ubuntu/data"
+steps:
+  - name: mdk_test_model
+    script_name: run_mdk_test_1
+    variables:
+      git_branch: "camel"
+      parent_dir: "/home/ubuntu/OasisPiWind"
+      test_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1"
+      run_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1/mdk-run"
+      expected_md5: "/home/ubuntu/data/expected/1-27-1/expected.md5"
+  - name: api_test_model  
+    env_vars:
+      OASIS_WORKER_VERSION: "1.26.3"
+      OASIS_UI_VERSION: "1.11.3"
+      OASIS_PLATFORM_VERSION: "1.26.3"
+    script_name: run_api_test_1 
+    variables:
+      git_branch: "camel"
+      parent_dir: "/home/ubuntu/OasisPiWind"
+      test_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1"
+      expected_md5: "/home/ubuntu/data/expected/1-27-1/expected.md5"
+      worker_name: "piwind_worker"
+      worker_dockerfile: "/home/ubuntu/OasisPiWind/docker/camel/Dockerfile.piwind_worker"
+      docker_compose_platform: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose.yml"
+      docker_compose_worker: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose_piwind.yml"
+      docker_compose_ui: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose_ui.yml"
