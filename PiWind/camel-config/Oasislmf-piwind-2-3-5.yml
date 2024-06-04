@@ -14,7 +14,7 @@ build_variables:
     root_block_size: "16"
 model_variables:
     state_s3_key: "eu-west-1/model_run/oasislmf-piwind/terraform.tfstate"
-    repository: "git@github.com:OasisLMF/OasisPiWind.git"
+    repository: "git@github.com:OasisLMF/OasisModels.git"
     oasislmf_version: "2.3.5"
     data_bucket: "oasislmf-model-library-oasis-piwind"
     data_directory: "/home/ubuntu/data"
@@ -22,10 +22,10 @@ steps:
   - name: mdk_test_model
     script_name: run_mdk_test_1
     variables:
-      git_branch: "camel"
-      parent_dir: "/home/ubuntu/OasisPiWind"
-      test_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1"
-      run_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1/mdk-run"
+      git_branch: "camel-config"
+      parent_dir: "/home/ubuntu/OasisModels/PiWind"
+      test_dir: "/home/ubuntu/OasisModels/PiWind/tests/test_1"
+      run_dir: "/home/ubuntu/OasisModels/PiWind/tests/test_1/mdk-run"
       expected_md5: "/home/ubuntu/data/expected/2-3-5/expected.md5"
   - name: api_test_model  
     env_vars:
@@ -34,12 +34,12 @@ steps:
       OASIS_PLATFORM_VERSION: "2.3.5"
     script_name: run_api_test_1 
     variables:
-      git_branch: "camel"
-      parent_dir: "/home/ubuntu/OasisPiWind"
-      test_dir: "/home/ubuntu/OasisPiWind/tests/camel/test_1"
+      git_branch: "camel-config"
+      parent_dir: "/home/ubuntu/OasisModels/PiWind"
+      test_dir: "/home/ubuntu/OasisModels/PiWind/tests/camel/test_1"
       expected_md5: "/home/ubuntu/data/expected/2-3-5/expected.md5"
       worker_name: "piwind_worker"
-      worker_dockerfile: "/home/ubuntu/OasisPiWind/docker/camel/Dockerfile.piwind_worker"
-      docker_compose_platform: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose.yml"
-      docker_compose_worker: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose_piwind.yml"
-      docker_compose_ui: "/home/ubuntu/OasisPiWind/docker/camel/docker-compose_ui.yml"
+      worker_dockerfile: "/home/ubuntu/OasisModels/PiWind/docker/camel/Dockerfile.piwind_worker"
+      docker_compose_platform: "/home/ubuntu/OasisModels/PiWind/docker/docker-compose.yml"
+      docker_compose_worker: "/home/ubuntu/OasisModels/PiWind/docker/docker-compose_piwind.yml"
+      docker_compose_ui: "/home/ubuntu/OasisModels/PiWind/docker/docker-compose_ui.yml"
