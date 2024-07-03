@@ -17,6 +17,16 @@
                 "nearest_neighbor_min_distance": 250
             }
         },
+        "section":{
+            "type": "rtree",
+            "columns": ["latitude", "longitude"],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/section_dict.parquet",
+                "file_type": "parquet",
+                "id_columns": ["section_id"], 
+                "nearest_neighbor_min_distance": -1
+            }
+        },
         "split_loc_perils_covered":{
             "type": "split_loc_perils_covered" ,
             "columns": ["locperilscovered"],
@@ -40,8 +50,8 @@
         "model_data":{
             "type": "model_data",
             "columns": ["customfloodsop","firstfloorheight"],
-            "parameters": {"columns": ["customfloodsop","firstfloorheight"]}
+            "parameters": {"columns": ["section_id","customfloodsop","firstfloorheight"]}
         }
     },
-    "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "model_data", "vulnerability"]
+    "strategy": ["split_loc_perils_covered", "peril", "section", "create_coverage_type", "model_data", "vulnerability"]
 }

@@ -24,7 +24,7 @@
             }
         }
     ],
-    "il_output": true,
+    "il_output": false,
     "il_summaries": [
         {
             "aalcalc": true,
@@ -38,7 +38,7 @@
             }
         }
     ],
-    "ri_output": true,
+    "ri_output": false,
     "ri_summaries": [
         {
             "aalcalc": true,

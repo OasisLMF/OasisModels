@@ -1,3 +1,3 @@
-# Explicit definition of package runner
+# Implicit definition
 
-Here we define the supplier model runner in the `oasislmf.json` file, which is then used to build the ktools `run_ktools.sh` script
+in this test we don't specifiy the model runner module, but the complex model package is picked up implicitly by the naming of the model, i.e. `OasisPiWindComplexModel`
