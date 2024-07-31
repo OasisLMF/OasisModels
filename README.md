@@ -28,3 +28,6 @@ This model builds upon the original PiWind model with a pre-analysis adjustment 
 
 ## PiWind Single Peril
 This is a simplified variant of the original PiWind model which has single peril (wind only) and would be a good basis for a single peril model in Oasis
+
+## PiWind Vulnerability Adjustments
+This model showcases how specific adjustments to the vulnerabilities can be introduced in `the analysis_settings.json` file. The `tests` folder contains three examples of the different ways the adjustments can be applied.
