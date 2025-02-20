@@ -1,2 +1,2 @@
-PortNumber,AccNumber,PolPerilsCovered,AccCurrency,PolNumber,PolDed6All,PolLimit6All
-1,1,WTC,EUR,1,50000,2000000
+PortNumber,AccNumber,PolPerilsCovered,PolPeril,AccCurrency,PolNumber,PolDed6All,PolLimit6All,PolLimitType6All,PolDedType6All
+1,1,WTC,WTC,EUR,1,50000,2000000,0,0

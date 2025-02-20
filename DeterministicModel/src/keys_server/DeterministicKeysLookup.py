@@ -93,10 +93,9 @@ class DeterministicKeysLookup(OasisBaseKeysLookup):
         for index, row in loc_df.iterrows():
             loc_id = row['loc_id']
             locperilscovered = row['locperilscovered']
-            # removed multi peril handling for now
-            # lst_perils = self.get_perils(locperilscovered)
+            lst_perils = self.get_perils(locperilscovered)
             # replaced with just WTC for simplicity
-            lst_perils = ['WTC']
+            # lst_perils = ['WTC']
             status = OASIS_KEYS_STATUS['success']['id']
 
 

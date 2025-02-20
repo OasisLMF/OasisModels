@@ -1,0 +1,29 @@
+{
+    "model_settings":{
+        "event_set":{
+            "name": "Event Set",
+            "desc": "Piwind Event Set selection",
+            "default": "p",
+            "options":[
+                {"id":"p", "desc": "Probabilistic", "number_of_events": 1447}
+            ]
+         },
+        "event_occurrence_id":{
+            "name": "Occurrence Set",
+            "desc": "PiWind Occurrence selection",
+            "default": "lt",
+            "options":[
+                {"id":"lt", "desc": "Long Term"}
+            ]
+        }
+     },
+    "lookup_settings":{
+        "supported_perils":[
+           {"id": "WTC", "desc": "Single Peril: Tropical Cyclone"}
+        ]
+    },
+    "data_settings": {
+	"group_fields": ["PortNumber", "AccNumber", "LocNumber"]
+    },
+    "model_default_samples" :10
+}
