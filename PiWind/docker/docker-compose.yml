@@ -99,8 +99,7 @@ services:
   v2-task-controller:
    restart: always
    image: ${SERVER_IMG:-coreoasis/api_server}:${VERS_API:-latest}
-   command: [celery, -A, 'src.server.oasisapi.celery_app_v2', worker, --loglevel=INFO, -Q, task-contr
-oller]
+   command: [celery, -A, 'src.server.oasisapi.celery_app_v2', worker, --loglevel=INFO, -Q, task-controller]
    links:
      - server-db
      - celery-db
