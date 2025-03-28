@@ -119,7 +119,7 @@ services:
    environment:
      <<: *shared-env
    volumes: *shared-volumes
-  v1-worker-piwindabsolutedamage:
+  v1-worker-piwindsingleperil:
     restart: always
     image: ${WORKER_IMG:-coreoasis/model_worker}:${VERS_WORKER:-latest}
     build:
