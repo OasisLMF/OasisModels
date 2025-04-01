@@ -1,6 +1,0 @@
-{
-    "lookup_data_dir": "/var/oasis/keys_data",
-    "lookup_module_path": "/home/worker/model/src/keys_server/ParisWindstormKeysLookup.py",
-    "model_data_dir": "/var/oasis/model_data",
-    "model_version_csv": "/var/oasis/keys_data/ModelVersion.csv"
-}

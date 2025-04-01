@@ -23,19 +23,6 @@ x-shared-env: &shared-env
   OASIS_INPUT_GENERATION_CONTROLLER_QUEUE: task-controller
   OASIS_LOSSES_GENERATION_CONTROLLER_QUEUE: task-controller
 
-x-oasis-env-v1: &oasis-env-v1
-  OASIS_DEBUG: ${DEBUG:-0}
-  OASIS_RABBIT_HOST: broker
-  OASIS_RABBIT_PORT: 5672
-  OASIS_RABBIT_USER: rabbit
-  OASIS_RABBIT_PASS: rabbit
-  OASIS_CELERY_DB_ENGINE: db+postgresql+psycopg2
-  OASIS_CELERY_DB_HOST: celery-db
-  OASIS_CELERY_DB_PASS: password
-  OASIS_CELERY_DB_USER: celery
-  OASIS_CELERY_DB_NAME: celery
-  OASIS_CELERY_DB_PORT: 5432
-
 x-volumes: &shared-volumes
   - filestore-OasisData:/shared-fs:rw
 services:
@@ -71,59 +58,9 @@ services:
      <<: *shared-env
    volumes:
      - filestore-OasisData:/shared-fs:rw
-  v1-worker-monitor:
-   restart: always
-   image: ${SERVER_IMG:-coreoasis/api_server}:${VERS_API:-latest}
-   command: [celery, -A, 'src.server.oasisapi.celery_app_v1', worker, --loglevel=INFO,]
-   links:
-     - server-db
-     - celery-db
-     - broker
-   environment:
-     <<: *shared-env
-   volumes:
-     - filestore-OasisData:/shared-fs:rw
-  v2-worker-monitor:
-   restart: always
-   image: ${SERVER_IMG:-coreoasis/api_server}:${VERS_API:-latest}
-   command: [celery, -A, 'src.server.oasisapi.celery_app_v2', worker, --loglevel=INFO,  -Q, celery-v2]
-   links:
-     - server-db
-     - celery-db
-     - broker
-   environment:
-     <<: *shared-env
-   volumes:
-     - filestore-OasisData:/shared-fs:rw
-  v2-task-controller:
-   restart: always
-   image: ${SERVER_IMG:-coreoasis/api_server}:${VERS_API:-latest}
-   command: [celery, -A, 'src.server.oasisapi.celery_app_v2', worker, --loglevel=INFO, -Q, task-controller]
-   links:
-     - server-db
-     - celery-db
-     - broker
-   environment:
-     <<: *shared-env
-   volumes:
-     - filestore-OasisData:/shared-fs:rw
-  celery-beat_v2:
-   restart: always
-   image: ${SERVER_IMG:-coreoasis/api_server}:${VERS_API:-latest}
-   command: [celery, -A, src.server.oasisapi.celery_app_v2, beat, --loglevel=INFO]
-   links:
-     - server-db
-     - celery-db
-     - broker
-   environment:
-     <<: *shared-env
-   volumes: *shared-volumes
   v1-worker:
     restart: always
     image: ${WORKER_IMG:-coreoasis/model_worker}:${VERS_WORKER:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.model_worker
     links:
      - celery-db
      - broker:mybroker
@@ -144,9 +81,6 @@ services:
   v2-worker:
     restart: always
     image: ${WORKER_IMG:-coreoasis/model_worker}:${VERS_WORKER:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.model_worker
     links:
      - celery-db
      - broker:mybroker

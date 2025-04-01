@@ -1,9 +1,0 @@
-FROM coreoasis/model_worker:1.26.2
-
-WORKDIR /home/worker
-
-COPY ./oasislmf_deploy.json /home/worker/model/oasislmf.json
-COPY ./meta-data/model_settings.json /home/worker/model/meta-data/model_settings.json
-COPY ./src/keys_server/ParisWindstormKeysLookup.py /home/worker/model/src/keys_server/ParisWindstormKeysLookup.py
-
-ENTRYPOINT ./startup.sh
