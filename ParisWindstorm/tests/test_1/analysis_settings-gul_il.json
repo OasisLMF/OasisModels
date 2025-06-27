@@ -10,17 +10,16 @@
         "eltcalc": true,
         "lec_output": true,
         "leccalc": {
-          "outputs": {
-            "wheatsheaf_aep": true,
-            "wheatsheaf_oep": true
-          },
+          "wheatsheaf_aep": true,
+          "wheatsheaf_oep": true,
           "return_period_file": true
         },
         "oed_fields": [
-          "LocNumber"
+          "PolNumber"
         ]
       }
     ],
+    "model_settings": {},
     "il_output": true,
     "il_summaries": [
       {
@@ -29,17 +28,13 @@
         "eltcalc": true,
         "lec_output": true,
         "leccalc": {
-          "outputs": {
-            "wheatsheaf_aep": true,
-            "wheatsheaf_oep": true
-          },
+          "wheatsheaf_aep": true,
+          "wheatsheaf_oep": true,
           "return_period_file": true
         },
         "oed_fields": [
-          "LocNumber",
           "PolNumber"
         ]
       }
-    ],
-    "model_settings": {}
+    ]
 }

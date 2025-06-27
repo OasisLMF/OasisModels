@@ -1,0 +1,3 @@
+PortNumber,AccNumber,LocNumber,LocName,NumberOfBuildings,Longitude,Latitude,CountryCode,AreaCode,PostalCode,GeogScheme1,GeogName1,GeogScheme2,GeogName2,FlexiLocAnalysisPolygonId,LocPerilsCovered,LocCurrency,BuildingTIV,ContentsTIV,BITIV,OtherTIV,OccupancyCode,ConstructionCode,BuildingType,Basement,FloorsOccupied,Protection,LocPeril,LocDed1Building,LocLimit1Building,LocDed2Other,LocLimit2Other,LocDed3Contents,LocLimit3Contents,LocDed4BI,LocLimit4BI,LocDedType1Building,LocLimitType1Building,LocDedType2Other,LocLimitType2Other,LocDedType3Contents,LocLimitType3Contents,LocDedType4BI,LocLimitType4BI,OEDVersion,NumberOfStoreys
+1,1,1,XYZ,1,0.278069,53.316788,GB,,,,,,,,WSS;ORF;OSF,USD,100000,0,0,0,1051,,0.0,,,,,0,0,0,0,0,0,0,0,,,,,,,,,3.4.1,
+

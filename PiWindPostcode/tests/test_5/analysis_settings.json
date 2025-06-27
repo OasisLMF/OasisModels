@@ -19,7 +19,8 @@
                 "full_uncertainty_aep": true,
                 "full_uncertainty_oep": true,
                 "return_period_file": true
-            }
+            },
+            "oed_fields": ["LocNumber"]
         }
     ],
     "il_output": true,

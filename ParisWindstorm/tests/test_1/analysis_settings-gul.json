@@ -1,0 +1,26 @@
+{
+    "model_name_id": "ParisWindstorm",
+    "model_supplier_id": "OasisLMF",
+    "number_of_samples": 10,
+    "gul_output": true,
+    "gul_summaries": [
+      {
+        "id": 1,
+        "aalcalc": true,
+        "eltcalc": true,
+        "lec_output": true,
+        "leccalc": {
+          "wheatsheaf_aep": true,
+          "wheatsheaf_oep": true,
+          "return_period_file": true
+        },
+        "oed_fields": [
+          "PolNumber"
+        ]
+      }
+    ],
+    "model_settings": {},
+    "il_output": false,
+    "il_summaries": [
+    ]
+}
