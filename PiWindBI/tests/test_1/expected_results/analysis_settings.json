@@ -15,6 +15,11 @@
             "aalcalc": true,
             "eltcalc": true,
             "id": 1,
+            "oed_fields": [
+                "PortNumber",
+                "AccNumber",
+                "LocNumber"
+            ],
             "lec_output": true,
             "leccalc": {
                 "full_uncertainty_aep": true,
