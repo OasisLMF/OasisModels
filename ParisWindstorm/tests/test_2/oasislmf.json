@@ -1,9 +1,0 @@
-{
-    "analysis_settings_json": "analysis_settings.json",
-    "lookup_data_dir": "../../keys_data",
-    "lookup_config_json": "../../keys_data/lookup_config.json",
-    "model_data_dir": "../../model_data",
-    "model_version_csv": "../../keys_data/ModelVersion.csv",
-    "oed_location_csv": "location.csv",
-    "oed_account_csv": "account.csv"
-}
