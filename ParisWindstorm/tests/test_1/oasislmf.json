@@ -1,5 +1,5 @@
 {
-    "analysis_settings_json": "analysis_settings-gul.json",
+    "analysis_settings_json": "analysis_settings.json",
     "lookup_data_dir": "../../keys_data",
     "lookup_config_json": "../../keys_data/lookup_config.json",
     "model_data_dir": "../../model_data",

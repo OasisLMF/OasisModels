@@ -13,7 +13,7 @@
             "parameters": {
                 "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict.parquet",
                 "file_type": "parquet",
-                "id_columns": ["area_peril_id"],
+                "id_columns": ["area_peril_id"], 
                 "nearest_neighbor_min_distance": 10
             }
         },
@@ -27,10 +27,7 @@
         "create_coverage_type": {
             "type": "simple_pivot",
             "parameters": {
-                "pivots": [{"new_cols": {"coverage_type": 1}},
-                           {"new_cols": {"coverage_type": 3}},
-                           {"new_cols": {"coverage_type": 4}}
-                           ]
+                "pivots": [{"new_cols": {"coverage_type": 1}}]
             }
         },
         "vulnerability": {
