@@ -1,0 +1,6 @@
+{
+    "lookup_data_dir": "/home/worker/model/keys_data",
+    "lookup_config_json": "/home/worker/model/keys_data/lookup_config.json",
+    "model_data_dir": "/home/worker/model/model_data",
+    "model_version_csv": "/home/worker/model/keys_data/ModelVersion.csv"
+}
