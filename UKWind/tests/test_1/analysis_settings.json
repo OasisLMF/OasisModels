@@ -1,7 +1,7 @@
 {
     "analysis_tag": "base_example",
     "source_tag": "MDK",
-    "model_name_id": "PiWind",
+    "model_name_id": "UKWind",
     "model_supplier_id": "OasisLMF",
     "gul_threshold": 0,
     "number_of_samples": 10,
