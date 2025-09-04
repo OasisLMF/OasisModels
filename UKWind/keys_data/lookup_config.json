@@ -1,10 +1,10 @@
 {
     "model": {
         "supplier_id": "OasisLMF",
-        "model_id": "PiWind",
-        "model_version": "0.0.0.1"
+        "model_id": "UKWind",
+        "model_version": "0.0.1"
     },
-    "builtin_lookup_type": "new_lookup",
+    "lookup_module_path": "new_lookup",
     "keys_data_path": "./",
     "step_definition": {
         "peril":{
@@ -21,14 +21,13 @@
             "type": "split_loc_perils_covered" ,
             "columns": ["locperilscovered"],
             "parameters": {
-                "model_perils_covered": ["WTC", "WSS"]
+                "model_perils_covered": ["WTC"]
             }
         },
         "create_coverage_type": {
             "type": "simple_pivot",
             "parameters": {
-                "pivots": [{"new_cols": {"coverage_type": 1}},
-                           {"new_cols": {"coverage_type": 3}}]
+                "pivots": [{"new_cols": {"coverage_type": 1}}]
             }
         },
         "vulnerability": {
@@ -40,4 +39,5 @@
         }
     },
     "strategy": ["split_loc_perils_covered", "peril", "create_coverage_type", "vulnerability"]
+
 }
