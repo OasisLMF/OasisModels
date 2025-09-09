@@ -6,25 +6,20 @@
     "gul_threshold": 0,
     "number_of_samples": 10,
     "gul_output": true,
-    "model_settings": {
-        "event_set": "p",
-        "event_occurrence_id": "lt"
-    },
+    "model_settings": {},
     "gul_summaries": [
         {
-            "aalcalc": true,
-            "eltcalc": true,
-            "id": 1,
-	    "oed_fields": ["PortNumber","AccNumber","LocNumber"],
-            "lec_output": true,
-            "leccalc": {
-                "full_uncertainty_aep": true,
-                "full_uncertainty_oep": true,
-                "return_period_file": true
-            }
+	    "ord_output":
+	        {
+			"elt_moment": true,
+			"alt_period": true,
+			"ept_full_uncertainty_aep": true,
+			"ept_full_uncertainty_oep": true
+		},
+            "id": 1
         }
     ],
-    "il_output": true,
+    "il_output": false,
     "il_summaries": [
         {
             "aalcalc": true,
@@ -38,7 +33,7 @@
             }
         }
     ],
-    "ri_output": true,
+    "ri_output": false,
     "ri_summaries": [
         {
             "aalcalc": true,

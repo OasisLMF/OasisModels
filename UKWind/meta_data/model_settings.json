@@ -1,22 +1,5 @@
 {
-    "model_settings":{
-        "event_set":{
-            "name": "Event Set",
-            "desc": "Piwind Event Set selection",
-            "default": "p",
-            "options":[
-                {"id":"p", "desc": "Probabilistic", "number_of_events": 1447}
-            ]
-         },
-        "event_occurrence_id":{
-            "name": "Occurrence Set",
-            "desc": "PiWind Occurrence selection",
-            "default": "lt",
-            "options":[
-                {"id":"lt", "desc": "Long Term"}
-            ]
-        }
-     },
+    "model_settings":{},
     "lookup_settings":{
         "supported_perils":[
            {"id": "WSS", "desc": "Single Peril: Storm Surge"},
