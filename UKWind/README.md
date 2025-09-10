@@ -1,9 +1,9 @@
 <img src="https://oasislmf.org/packages/oasis_theme_package/themes/oasis_theme/assets/src/oasis-lmf-colour.png" alt="Oasis LMF logo" width="250"/>
 
-# PiWind
+# UK Wind Model
 
-This is the original test model in Oasis and is an example of a multi-peril model implementation representing ficticious events with wind and flood affecting the Town of Melton Mowbray in England.
+This is a large test model covering the whole of the UK.
 
-More information on PiWind can be found [here](https://oasislmf.github.io/sections/Oasis-models.html#piwind-toy-model).
+The model has 10,000 events and covers 100,000 years. The example exposure data in tests/test1 is 20m locations
 
-The Oasis PiWind repository is availible [here](https://github.com/OasisLMF/OasisPiWind).
+To retrieve the model and exposure data, you will need to run the get_large_data.sh script which will pull the large files from S3
