@@ -1,0 +1,8 @@
+{
+    "storage_class": "oasis_data_manager.filestore.backends.azure_abfs.AzureABFSStorage",
+    "options":{
+        "azure_container": "data",
+        "root_dir": "OasisPiWind/model_data/PiWind/"
+    }
+}
+

@@ -47,11 +47,14 @@
                            "id_columns": ["vulnerability_id"]
                           }
         },
-        "model_data":{
-            "type": "model_data",
+        "dynamic_model_adjustment":{
+            "type": "dynamic_model_adjustment",
             "columns": ["customfloodsop","firstfloorheight"],
-            "parameters": {"columns": ["section_id","customfloodsop","firstfloorheight"]}
+            "parameters": {
+		    "intensity_adjustment_col": "firstfloorheight",
+		    "return_period_col": "customfloodsop"
+	    }
         }
     },
-    "strategy": ["split_loc_perils_covered", "peril", "section", "create_coverage_type", "model_data", "vulnerability"]
+    "strategy": ["split_loc_perils_covered", "peril", "section", "create_coverage_type", "dynamic_model_adjustment", "vulnerability"]
 }
