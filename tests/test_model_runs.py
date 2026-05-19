@@ -96,6 +96,7 @@ def test_model_run(config_path, tmp_path):
         # Surface both streams to make failures easy to diagnose
         pytest.fail(
             f"oasislmf model run failed for {config_path}\n"
+            f"--- re-run command ---\n{' '.join(cmd)}\n"
             f"--- stdout ---\n{result.stdout}\n"
             f"--- stderr ---\n{result.stderr}"
         )
