@@ -5,6 +5,7 @@ import math
 import numpy as np
 import os
 import pandas as pd
+import shutil
 import struct
 import sys
 
@@ -12,6 +13,15 @@ import sys
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
 output_stdout = sys.stdout.buffer
+
+_USE_BINTOCSV = shutil.which('bintocsv') is not None
+
+
+def _csv_cmd(file_type, legacy_cmd):
+    """Return bintocsv <file_type> if bintocsv is available, else legacy_cmd."""
+    if _USE_BINTOCSV:
+        return f'bintocsv {file_type}'
+    return legacy_cmd
 
 
 def parse_arguments():
@@ -113,7 +123,11 @@ def check_footprint_files_exist_and_read_them(static_dir):
             raise Exception(
                 f'Footprint {k} file {os.path.abspath(v)} does not exist.'
             )
-    with os.popen(f"footprinttocsv -b {footprint_fp['bin']} -x {footprint_fp['idx']}") as p:
+    if _USE_BINTOCSV:
+        foot_cmd = f"bintocsv footprint -i {footprint_fp['bin']} -x {footprint_fp['idx']}"
+    else:
+        foot_cmd = f"footprinttocsv -b {footprint_fp['bin']} -x {footprint_fp['idx']}"
+    with os.popen(foot_cmd) as p:
         df_foot = pd.read_csv(p)
     df_foot.columns = df_foot.columns.str.replace(' ', '')
 
@@ -143,7 +157,7 @@ def get_event_ids(inputs_dir, event_batch, max_event_batch):
     events_fp = os.path.join(inputs_dir, events_file);
     if not os.path.exists(events_fp):
         raise Exception('Events file does not exist.')
-    with os.popen(f'evetocsv < {events_fp}') as p:
+    with os.popen(f'{_csv_cmd("eve", "evetocsv")} < {events_fp}') as p:
         events_pd = pd.read_csv(p)
 
     # Randomise event IDs and sort into batches
@@ -200,7 +214,7 @@ def get_model(event_ids, inputs_dir, static_dir):
     # Merge vulnerability_id from model data in complex items file
     df_items = check_bin_file_exists_and_read_it(
         'Complex items', os.path.join(inputs_dir, 'complex_items.bin'),
-        'complex_itemtocsv'
+        _csv_cmd('complex_items', 'complex_itemtocsv')
     )
     model_data_fields = ['area_peril_id', 'vulnerability_id']
     for field in model_data_fields:
@@ -216,7 +230,7 @@ def get_model(event_ids, inputs_dir, static_dir):
     # Merge damage_bin_index from vulnerability file
     df_vul = check_bin_file_exists_and_read_it(
         'Vulnerability', os.path.join(static_dir, 'vulnerability.bin'),
-        'vulnerabilitytocsv'
+        _csv_cmd('vulnerability', 'vulnerabilitytocsv')
     )
     # Calculate cummulative probability
     df_vul['cum_prob'] = df_vul.groupby(
@@ -233,7 +247,7 @@ def get_model(event_ids, inputs_dir, static_dir):
     # Merge interpolation from damage bin dict file
     df_damage_bin_dict = check_bin_file_exists_and_read_it(
         'Damage bin dictionary',
-        os.path.join(static_dir, 'damage_bin_dict.bin'), 'damagebintocsv'
+        os.path.join(static_dir, 'damage_bin_dict.bin'), _csv_cmd('damagebin', 'damagebintocsv')
     )
     # Drop unrequired column to free memory
     #df_damage_bin_dict.drop('interval_type', axis=1, inplace=True)
@@ -369,7 +383,7 @@ def gul_calc(
 
     # Merge TIVs from coverages file
     df_coverages = check_bin_file_exists_and_read_it(
-        'Coverages', os.path.join(static_dir, 'coverages.bin'), 'coveragetocsv'
+        'Coverages', os.path.join(static_dir, 'coverages.bin'), _csv_cmd('coverages', 'coveragetocsv')
     )
     df_model = pd.merge(df_model, df_coverages, how='inner', on='coverage_id')
     df_model.sort_values(
