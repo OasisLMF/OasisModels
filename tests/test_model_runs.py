@@ -27,8 +27,15 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 
-# Models that require external cloud credentials to run
-SKIP_MODELS = {"PiWindAzure", "PiWindS3", "PiWindComplexModel"}
+# Models to skip, as (model_name, reason) tuples
+SKIP_MODELS = [
+    ("PiWindAzure", "requires Azure cloud credentials"),
+    ("PiWindS3", "requires S3 cloud credentials"),
+    ("PiWindComplexModel", "complex model not yet updated for current oasislmf"),
+    ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
+]
+
+_SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}
 
 
 def _collect_test_configs():
@@ -56,9 +63,9 @@ def _build_params():
     params = []
     for model_name, test_name, config_path in _collect_test_configs():
         marks = []
-        if model_name in SKIP_MODELS:
+        if model_name in _SKIP_REASONS:
             marks.append(pytest.mark.cloud)
-            marks.append(pytest.mark.skip(reason=f"{model_name} in skip list"))
+            marks.append(pytest.mark.skip(reason=_SKIP_REASONS[model_name]))
         params.append(
             pytest.param(
                 config_path,
