@@ -426,9 +426,12 @@ def gul_calc(
             'sidx': sidx_range,
             'rand': randoms,
         }))
-    rand_lookup = pd.concat(rand_chunks, ignore_index=True)
-    df_gul = df_gul.merge(rand_lookup, on=['event_id', 'group_id', 'sidx'], how='left')
-    df_gul['rand'] = df_gul['rand'].fillna(0.0)
+    if rand_chunks:
+        rand_lookup = pd.concat(rand_chunks, ignore_index=True)
+        df_gul = df_gul.merge(rand_lookup, on=['event_id', 'group_id', 'sidx'], how='left')
+        df_gul['rand'] = df_gul['rand'].fillna(0.0)
+    else:
+        df_gul['rand'] = 0.0
 
     # Get location on CDF
     df_gul = pd.merge(df_gul, df_model, how='left', on=['event_id', 'item_id'])
