@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 counter_dict = {}
@@ -45,7 +46,11 @@ class ExposurePreAnalysis:
         location_df = self.exposure_data.location.dataframe
 
         # access custom CSV file defined in exposure_pre_analysis_settings file
-        df_built_env = pd.read_csv(self.exposure_pre_analysis_setting['Built_environment'])
+        csv_path = self.exposure_pre_analysis_setting['Built_environment']
+        if not os.path.isabs(csv_path):
+            module_dir = os.path.dirname(os.path.abspath(__file__))
+            csv_path = os.path.normpath(os.path.join(module_dir, csv_path))
+        df_built_env = pd.read_csv(csv_path)
 
         # Fill source location file defaults for disaggregation
 
