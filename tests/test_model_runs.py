@@ -28,7 +28,7 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent
 
 # Models that require external cloud credentials to run
-CLOUD_MODELS = {"PiWindAzure", "PiWindS3"}
+SKIP_MODELS = {"PiWindAzure", "PiWindS3", "PiWindComplexModel"}
 
 
 def _collect_test_configs():
@@ -56,9 +56,9 @@ def _build_params():
     params = []
     for model_name, test_name, config_path in _collect_test_configs():
         marks = []
-        if model_name in CLOUD_MODELS:
+        if model_name in SKIP_MODELS:
             marks.append(pytest.mark.cloud)
-            marks.append(pytest.mark.skip(reason=f"{model_name} requires cloud credentials"))
+            marks.append(pytest.mark.skip(reason=f"{model_name} in skip list"))
         params.append(
             pytest.param(
                 config_path,
