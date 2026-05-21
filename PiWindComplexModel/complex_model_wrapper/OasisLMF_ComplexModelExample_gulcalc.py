@@ -1,4 +1,5 @@
 import argparse
+import ast
 import json
 import logging
 import math
@@ -161,15 +162,14 @@ def get_event_ids(inputs_dir, event_batch, max_event_batch):
         events_pd = pd.read_csv(p)
 
     # Randomise event IDs and sort into batches
+    n_events = len(events_pd)
     np.random.seed(1234)   # Use same random seed for all batches
     events_pd['event_id'] = np.random.choice(
-        events_pd['event_id'], events_pd.size, replace=False
+        events_pd['event_id'], n_events, replace=False
     )
-    chunksize = math.ceil(events_pd.size / max_event_batch)
+    chunksize = math.ceil(n_events / max_event_batch)
     start_position = chunksize * (event_batch - 1)
-    end_position = chunksize * event_batch
-    if end_position > events_pd.size:
-        end_position = events_pd.size
+    end_position = min(chunksize * event_batch, n_events)
 
     return events_pd['event_id'].to_numpy()[start_position:end_position]
 
@@ -216,15 +216,12 @@ def get_model(event_ids, inputs_dir, static_dir):
         'Complex items', os.path.join(inputs_dir, 'complex_items.bin'),
         _csv_cmd('complex_items', 'complex_itemtocsv')
     )
-    model_data_fields = ['area_peril_id', 'vulnerability_id']
-    for field in model_data_fields:
-        df_items[field] = [
-            d.get(field) for d in df_items.model_data.apply(eval)
-        ]
-    # Drop model_data column to free memory
+    parsed = df_items['model_data'].apply(ast.literal_eval)
+    df_items['area_peril_id'] = parsed.apply(lambda d: d.get('area_peril_id'))
+    df_items['vulnerability_id'] = parsed.apply(lambda d: d.get('vulnerability_id'))
     df_items.drop('model_data', axis=1, inplace=True)
     df_model = pd.merge(
-        df_model, df_items[model_data_fields], how='inner', on='area_peril_id'
+        df_model, df_items[['area_peril_id', 'vulnerability_id']], how='inner', on='area_peril_id'
     ).drop_duplicates()
 
     # Merge damage_bin_index from vulnerability file
@@ -322,27 +319,14 @@ def random_number_generation(event_id, group_id, number_of_samples):
     return rng.uniform(size=number_of_samples)
 
 
-def calculate_guls(row):
-    """
-    Calculate Ground Up Losses (GULs) for each sample. In this example, all bin
-    means lie in the centre of their bins, and therefore the case when this is
-    not true has not been included. This simplifies the function.
-
-    :param row: sample parameters
-    :dtype row: pandas Series
-
-    :return: Ground Up Loss (GUL) value for sample
-    :dtype: float
-    """
-
-    if row['bin_from'] == row['bin_to']:
-        return row['bin_to'] * row['tiv']
-    else:
-        return (
-            row['bin_from'] + (
-                (row['rand'] - row['prob_from']) / (row['bin_height'])
-            ) * (row['bin_width'])
-        ) * row['tiv']
+def calculate_guls_vectorized(df):
+    """Vectorized GUL calculation using np.where instead of row-by-row apply."""
+    same_bin = df['bin_from'] == df['bin_to']
+    return np.where(
+        same_bin,
+        df['bin_to'] * df['tiv'],
+        (df['bin_from'] + (df['rand'] - df['prob_from']) / df['bin_height'] * df['bin_width']) * df['tiv']
+    )
 
 
 def gul_calc(
@@ -395,9 +379,7 @@ def gul_calc(
     df_model['prob_from'] = df_model.groupby(
         ['order', 'item_id']
     )['prob_to'].shift(1).fillna(0.0)
-    df_model['bin_height'] = df_model.apply(
-        lambda x: x.prob_to - x.prob_from, axis=1
-    )
+    df_model['bin_height'] = df_model['prob_to'] - df_model['prob_from']
     df_model['mean_1'] = df_model['bin_height'] * df_model['bin_mean'] * df_model['tiv']
     df_model['std_1'] = df_model['mean_1'] * df_model['bin_mean'] * df_model['tiv']
 
@@ -431,17 +413,22 @@ def gul_calc(
     )
 
     # Random numbers for all samples (i.e. sidx > 0)
-    df_gul['rand'] = 0.0
-    for idx, row in df_gul[
-        ['event_id', 'item_id', 'group_id']
-    ].drop_duplicates().iterrows():
-        eve_id = row['event_id']
-        it_id = row['item_id']
-        gr_id = row['group_id']
-        df_gul.loc[
-            (df_gul['event_id'] == eve_id) & (df_gul['item_id'] == it_id) & (df_gul['group_id'] == gr_id) & (df_gul['sidx'] > 0),
-            'rand'
-        ] = random_number_generation(eve_id, gr_id, number_of_samples)
+    # Generate per unique (event_id, group_id) pair, then merge — avoids O(n) scan per item
+    sidx_range = np.arange(1, number_of_samples + 1, dtype=np.int32)
+    rand_chunks = []
+    for _, grp_row in df_gul[['event_id', 'group_id']].drop_duplicates().iterrows():
+        eve_id = grp_row['event_id']
+        gr_id = grp_row['group_id']
+        randoms = random_number_generation(eve_id, gr_id, number_of_samples)
+        rand_chunks.append(pd.DataFrame({
+            'event_id': eve_id,
+            'group_id': gr_id,
+            'sidx': sidx_range,
+            'rand': randoms,
+        }))
+    rand_lookup = pd.concat(rand_chunks, ignore_index=True)
+    df_gul = df_gul.merge(rand_lookup, on=['event_id', 'group_id', 'sidx'], how='left')
+    df_gul['rand'] = df_gul['rand'].fillna(0.0)
 
     # Get location on CDF
     df_gul = pd.merge(df_gul, df_model, how='left', on=['event_id', 'item_id'])
@@ -461,9 +448,8 @@ def gul_calc(
     )
 
     # Calculate GULs
-    df_gul.loc[df_gul['sidx'] > 0, 'loss'] = df_gul[df_gul['sidx'] > 0].apply(
-        calculate_guls, axis=1
-    )
+    sample_mask = df_gul['sidx'] > 0
+    df_gul.loc[sample_mask, 'loss'] = calculate_guls_vectorized(df_gul[sample_mask])
 
     # Calculate tiv_idx sidx = -3
     df_items_per_coverage = df_gul[
@@ -521,14 +507,16 @@ def write_loss_stream(loss_output_stream, number_of_samples, df_gul):
     output_loss.write(struct.pack('i', loss_stream_id))
     output_loss.write(struct.pack('i', number_of_samples))
 
-    for event_id, item_id in df_gul[['event_id', 'item_id']].drop_duplicates().to_numpy():
-        output_loss.write(struct.pack('i', event_id))
-        output_loss.write(struct.pack('i', item_id))
-        for row in df_gul[(df_gul['event_id'] == event_id) & (df_gul['item_id'] == item_id)].itertuples(index=False):
-            output_loss.write(struct.pack('i', row[2]))   # sidx
-            output_loss.write(struct.pack('f', row[3]))   # loss
-        output_loss.write(struct.pack('i', 0))
-        output_loss.write(struct.pack('f', 0.0))
+    _terminator = struct.pack('if', 0, 0.0)
+    _row_dtype = np.dtype([('sidx', np.int32), ('loss', np.float32)])
+    df_sorted = df_gul.sort_values(['event_id', 'item_id', 'sidx'])
+    for (event_id, item_id), grp in df_sorted.groupby(['event_id', 'item_id'], sort=False):
+        output_loss.write(struct.pack('ii', int(event_id), int(item_id)))
+        buf = np.empty(len(grp), dtype=_row_dtype)
+        buf['sidx'] = grp['sidx'].values
+        buf['loss'] = grp['loss'].values.astype(np.float32)
+        output_loss.write(buf.tobytes())
+        output_loss.write(_terminator)
 
 
 def main():
