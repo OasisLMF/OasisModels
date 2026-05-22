@@ -1,0 +1,49 @@
+name: Model Tests
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+    inputs:
+      oasislmf_branch:
+        description: 'oasislmf git branch to install (leave empty for latest PyPI release)'
+        required: false
+        default: ''
+      ods_branch:
+        description: 'ODS_Tools git branch to install (leave empty for version bundled with oasislmf)'
+        required: false
+        default: ''
+
+jobs:
+  run-model-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install oasislmf (PyPI)
+        if: ${{ !inputs.oasislmf_branch }}
+        run: pip install oasislmf
+
+      - name: Install oasislmf (git branch)
+        if: ${{ inputs.oasislmf_branch }}
+        run: pip install "git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.oasislmf_branch }}"
+
+      - name: Install ODS_Tools (git branch)
+        if: ${{ inputs.ods_branch }}
+        run: pip install "git+https://github.com/OasisLMF/ODS_Tools.git@${{ inputs.ods_branch }}"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run model tests
+        run: pytest tests/test_model_runs.py -v
