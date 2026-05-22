@@ -14,12 +14,12 @@ or to run everything::
     pytest -m ""
 """
 
-import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
+
+from tests.conftest import apply_results_flags
 
 # ---------------------------------------------------------------------------
 # Config discovery
@@ -82,8 +82,9 @@ def _build_params():
 
 
 @pytest.mark.parametrize("config_path", _build_params())
-def test_model_run(config_path, tmp_path):
+def test_model_run(config_path, tmp_path, check_results, update_results):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
+    run_dir = tmp_path / "run"
     cmd = [
         "oasislmf",
         "model",
@@ -91,7 +92,7 @@ def test_model_run(config_path, tmp_path):
         "--config",
         str(config_path),
         "--model-run-dir",
-        str(tmp_path / "run"),
+        str(run_dir),
     ]
     result = subprocess.run(
         cmd,
@@ -100,10 +101,11 @@ def test_model_run(config_path, tmp_path):
     )
 
     if result.returncode != 0:
-        # Surface both streams to make failures easy to diagnose
         pytest.fail(
             f"oasislmf model run failed for {config_path}\n"
             f"--- re-run command ---\n{' '.join(cmd)}\n"
             f"--- stdout ---\n{result.stdout}\n"
             f"--- stderr ---\n{result.stderr}"
         )
+
+    apply_results_flags(run_dir, config_path.parent, check_results, update_results)
