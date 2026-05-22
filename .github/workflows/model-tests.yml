@@ -36,7 +36,7 @@ jobs:
 
       - name: Install oasislmf (git branch)
         if: ${{ inputs.oasislmf_branch }}
-        run: pip install "git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.oasislmf_branch }}#egg=oasislmf[extra]"
+        run: pip install "oasislmf[extra] @ git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.oasislmf_branch }}"
 
       - name: Install ODS_Tools (git branch)
         if: ${{ inputs.ods_branch }}
