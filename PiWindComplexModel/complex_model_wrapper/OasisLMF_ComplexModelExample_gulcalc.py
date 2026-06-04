@@ -1,560 +1,340 @@
+"""
+Complex model GUL wrapper — PiWind demo.
+
+Demonstrates how a supplier model integrates with the oasislmf ktools pipeline:
+  - Reads complex_items.bin (supplier-specific per-item model data)
+  - Reads footprint.bin/.idx to determine per-event hazard intensity per location
+  - Generates GUL samples and writes the binary stream expected by ktools downstream
+
+The loss model is intentionally simple (intensity-weighted random fraction of TIV)
+so the integration wiring is easy to follow. A production model would replace
+compute_guls() with a full vulnerability CDF lookup.
+"""
 import argparse
 import json
 import logging
-import math
+import msgpack
 import numpy as np
 import os
-import pandas as pd
 import struct
 import sys
 
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+log = logging.getLogger(__name__)
 
-logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+# ---------------------------------------------------------------------------
+# ktools binary format dtypes
+# ---------------------------------------------------------------------------
+_ITEM_HDR_DTYPE = np.dtype([
+    ('item_id', '<i4'), ('coverage_id', '<u4'), ('group_id', '<u4'), ('model_data_len', '<u4'),
+])
+# coverages.bin is a flat float32 array; tiv for coverage_id k is coverages[k-1]
+_COVERAGES_DTYPE = np.float32
+_EVENTS_DTYPE = np.dtype([('event_id', '<i4')])
+_FP_IDX_DTYPE = np.dtype([('event_id', '<i4'), ('offset', '<i8'), ('size', '<i8')])
+_FP_RECORD_DTYPE = np.dtype([('areaperil_id', '<u4'), ('intensity_bin_id', '<i4'), ('probability', '<f4')])
+_FP_HEADER_SIZE = 8   # footprint.bin: num_intensity_bins (i4) + has_intensity_uncertainty (i4)
 
-output_stdout = sys.stdout.buffer
+GUL_STREAM_ID = (2 << 24) | 1
 
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
 
 def parse_arguments():
-    """
-    Read arguments from command line and check validity.
-
-    :return: arguments
-    :dtype: namespace object
-    """
-
-    parser = argparse.ArgumentParser(description='Ground up loss generation.')
-    parser.add_argument(
-        '-e', '--event-batch', required=True, nargs=2, type=int,
-        help='The nth batch out of m'
-    )
-    parser.add_argument(
-        '-a', '--analysis-settings-file', required=True,
-        help='The analysis settings file'
-    )
-    parser.add_argument(
-        '-p', '--inputs-directory', required=True, help='The inputs directory'
-    )
-    parser.add_argument(
-        '-f', '--complex-items-filename', default='complex_items.bin',
-        help='The complex items file name'
-    )
-    parser.add_argument(
-        '-i', '--loss-output-stream', required=True, default=None,
-        help='Loss output stream'
-    )
+    parser = argparse.ArgumentParser(description='Complex model GUL wrapper.')
+    parser.add_argument('-e', '--event-batch', required=True, nargs=2, type=int,
+                        help='Batch n of m (e.g. -e 3 12)')
+    parser.add_argument('-a', '--analysis-settings-file', required=True)
+    parser.add_argument('-p', '--inputs-directory', required=True)
+    parser.add_argument('-f', '--complex-items-filename', default='complex_items.bin')
+    parser.add_argument('-i', '--loss-output-stream', required=False, default='-',
+                        nargs='?', const='-',
+                        help='Output file path, or - for stdout (default); bare -i also means stdout')
 
     args = parser.parse_args()
 
-    # Check files and directories exist
+    # oasislmf >= 2.x copies analysis_settings.json into the inputs directory;
+    # fall back there if the given path doesn't exist.
     if not os.path.exists(args.analysis_settings_file):
-        raise Exception('Analysis settings file does not exist.')
-    inputs_dir = args.inputs_directory
-    if not os.path.exists(inputs_dir):
-        raise Exception('Inputs directory does not exist.')
-    complex_items_fp = os.path.join(inputs_dir, args.complex_items_filename)
-    if not os.path.exists(complex_items_fp):
-        raise Exception('Complex items file does not exist.')
-    # Check event batch validity
-    (event_batch, max_event_batch) = args.event_batch
-    if event_batch > max_event_batch:
-        raise Exception('Invalid event batch.')
+        alt = os.path.join(args.inputs_directory, 'analysis_settings.json')
+        if os.path.exists(alt):
+            args.analysis_settings_file = alt
+        else:
+            raise SystemExit('Analysis settings file does not exist.')
+
+    if not os.path.isdir(args.inputs_directory):
+        raise SystemExit('Inputs directory does not exist.')
+
+    event_batch, max_batch = args.event_batch
+    if event_batch > max_batch:
+        raise SystemExit('Invalid event batch.')
 
     return args
 
 
-def check_bin_file_exists_and_read_it(file_desc, input_fp, conversion_tool):
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
+def read_complex_items(inputs_dir, filename):
     """
-    Check model data or complex items binary file exists, convert to csv using
-    ktools executables and return file contents as dataframe
+    Parse complex_items.bin.
 
-    :param file_desc: brief description of file to be opened
-    :dtype file_desc: str
+    Each record: item_id (i4), coverage_id (u4), group_id (u4),
+                 model_data_len (u4), model_data (msgpack bytes).
 
-    :param input_fp: file path to binary file
-    :dtype input_fp: str
+    model_data is a msgpack-encoded string containing a JSON dict with at least
+    'area_peril_id' and 'vulnerability_id' keys.  Only area_peril_id is used here.
 
-    :param conversion_tool: ktools binary to csv conversion tool executable
-    :dtype: str
-
-    :return: data from binary file
-    :dtype: pandas.DataFrame
+    Returns four parallel int32/uint32 arrays: item_id, coverage_id, group_id, area_peril_id.
     """
+    raw = np.frombuffer(open(os.path.join(inputs_dir, filename), 'rb').read(), dtype=np.uint8)
+    hdr_size = _ITEM_HDR_DTYPE.itemsize
 
-    if not os.path.exists(input_fp):
-        raise Exception(
-            f'{file_desc} file {os.path.abspath(input_fp)} does not exist.'
-        )
-    with os.popen(f'{conversion_tool} < {input_fp}') as p:
-        input_df = pd.read_csv(p)
-    input_df.columns = input_df.columns.str.replace(' ', '')
-    input_df.columns = input_df.columns.str.replace('"', '')
+    item_ids, coverage_ids, group_ids, area_peril_ids = [], [], [], []
+    cursor = 0
+    while cursor + hdr_size <= len(raw):
+        hdr = raw[cursor:cursor + hdr_size].view(_ITEM_HDR_DTYPE)[0]
+        cursor += hdr_size
 
-    return input_df
+        md_bytes = raw[cursor:cursor + hdr['model_data_len']].tobytes()
+        cursor += hdr['model_data_len']
 
+        md = msgpack.unpackb(md_bytes, raw=False)
+        if isinstance(md, str):
+            md = json.loads(md)
 
-def check_footprint_files_exist_and_read_them(static_dir):
-    """
-    Check footprint.bin and footprint.idx files exist, convert to csv using
-    footprinttobin ktools executable and return file contents as dataframe
+        item_ids.append(hdr['item_id'])
+        coverage_ids.append(hdr['coverage_id'])
+        group_ids.append(hdr['group_id'])
+        area_peril_ids.append(md.get('area_peril_id', 0))
 
-    :param static_dir: static directory
-    :dtype static_dir: str
-
-    :return: data from binary files
-    :dtype: pandas.DataFrame
-    """
-
-    footprint_fp = {
-        'bin': os.path.join(static_dir, 'footprint.bin'),
-        'idx': os.path.join(static_dir, 'footprint.idx')
-    }
-    for k, v in footprint_fp.items():
-        if not os.path.exists(v):
-            raise Exception(
-                f'Footprint {k} file {os.path.abspath(v)} does not exist.'
-            )
-    with os.popen(f"footprinttocsv -b {footprint_fp['bin']} -x {footprint_fp['idx']}") as p:
-        df_foot = pd.read_csv(p)
-    df_foot.columns = df_foot.columns.str.replace(' ', '')
-
-    return df_foot
-
-
-def get_event_ids(inputs_dir, event_batch, max_event_batch):
-    """
-    Get event IDs from events file. Randomises and splits event IDs over
-    multiple batches.
-
-    :param inputs_dir: inputs directory
-    :dtype inputs_dir: str
-
-    :param event_batch: batch number
-    :dtype event_batch: int
-
-    :param max_event_batch: maximum number of batches
-    :dtype max_event_batch: int
-
-    :return: event IDs
-    :dtype: numpy.ndarray
-    """
-
-    # Check events file exists and open it
-    events_file = 'events.bin'
-    events_fp = os.path.join(inputs_dir, events_file);
-    if not os.path.exists(events_fp):
-        raise Exception('Events file does not exist.')
-    with os.popen(f'evetocsv < {events_fp}') as p:
-        events_pd = pd.read_csv(p)
-
-    # Randomise event IDs and sort into batches
-    np.random.seed(1234)   # Use same random seed for all batches
-    events_pd['event_id'] = np.random.choice(
-        events_pd['event_id'], events_pd.size, replace=False
-    )
-    chunksize = math.ceil(events_pd.size / max_event_batch)
-    start_position = chunksize * (event_batch - 1)
-    end_position = chunksize * event_batch
-    if end_position > events_pd.size:
-        end_position = events_pd.size
-
-    return events_pd['event_id'].to_numpy()[start_position:end_position]
-
-
-def get_model(event_ids, inputs_dir, static_dir):
-    """
-    Get Cummulative Distribution Functions (CDFs) from event ids, merging data
-    from model data files. Also returns damage bin dictionary and item
-    dataframes.
-
-    :param event_ids: event IDs
-    :dtype event_ids: numpy.ndarray
-
-    :param inputs_dir: inputs directory
-    :dtype inputs_dir: str
-
-    :param static_dir: static directory
-    :dtype static_dir: str
-
-    :return df_model: summary of model data required to calculate ground up losses
-    :dtype df_model: pandas.DataFrames
-
-    :return df_items: contents of items file
-    :dtype df_items: pandas.DataFrame
-
-    :return df_damage_bin_dict: contents of damage bin dictionary file
-    :dtype df_damage_bin_dict: pandas.DataFrame
-    """
-
-    df_model = pd.DataFrame({'event_id': event_ids})
-
-    df_model['order'] = df_model.index   # Preserve initial order
-
-    # Merge areaperil_id from footprint file
-    df_foot = check_footprint_files_exist_and_read_them(static_dir)
-    # No intensity uncertainty so probabilities are all 1 and not needed
-    df_foot.drop('probability', axis=1, inplace=True)
-    df_foot.rename(columns={'areaperil_id': 'area_peril_id'}, inplace=True)
-    df_model = pd.merge(df_model, df_foot, how='inner', on='event_id')
-    del df_foot   # Unrequired: delete to free memory
-
-    # Merge vulnerability_id from model data in complex items file
-    df_items = check_bin_file_exists_and_read_it(
-        'Complex items', os.path.join(inputs_dir, 'complex_items.bin'),
-        'complex_itemtocsv'
-    )
-    model_data_fields = ['area_peril_id', 'vulnerability_id']
-    for field in model_data_fields:
-        df_items[field] = [
-            d.get(field) for d in df_items.model_data.apply(eval)
-        ]
-    # Drop model_data column to free memory
-    df_items.drop('model_data', axis=1, inplace=True)
-    df_model = pd.merge(
-        df_model, df_items[model_data_fields], how='inner', on='area_peril_id'
-    ).drop_duplicates()
-
-    # Merge damage_bin_index from vulnerability file
-    df_vul = check_bin_file_exists_and_read_it(
-        'Vulnerability', os.path.join(static_dir, 'vulnerability.bin'),
-        'vulnerabilitytocsv'
-    )
-    # Calculate cummulative probability
-    df_vul['cum_prob'] = df_vul.groupby(
-        ['vulnerability_id', 'intensity_bin_id']
-    ).cumsum()['probability']
-    df_model = pd.merge(
-        df_model, df_vul, how='inner',
-        on=['vulnerability_id', 'intensity_bin_id']
-    )
-    # Drop unrequired columns and dataframe to free memory
-    df_model.drop(['intensity_bin_id', 'probability'], axis=1, inplace=True)
-    del df_vul
-
-    # Merge interpolation from damage bin dict file
-    df_damage_bin_dict = check_bin_file_exists_and_read_it(
-        'Damage bin dictionary',
-        os.path.join(static_dir, 'damage_bin_dict.bin'), 'damagebintocsv'
-    )
-    # Drop unrequired column to free memory
-    #df_damage_bin_dict.drop('interval_type', axis=1, inplace=True)
-    df_model = pd.merge(
-        df_model, df_damage_bin_dict[['bin_index', 'interpolation']],
-        how='inner', left_on='damage_bin_id', right_on='bin_index'
-    )
-    # Drop unrequired column to free memory
-    df_model.drop('bin_index', axis=1, inplace=True)
-    # Restore initial order and drop unrequired order column
-    df_model.sort_values(
-        by=['order', 'area_peril_id', 'vulnerability_id', 'damage_bin_id'],
-        ascending=True, inplace=True
-    )
-    df_model.drop('order', axis=1, inplace=True)
-
-    # Rename columns and reset index
-    df_model.columns = [
-        'event_id', 'areaperil_id', 'vulnerability_id', 'bin_index', 'prob_to',
-        'bin_mean'
-    ]
-    df_model.reset_index(drop=True, inplace=True)
-
-    return df_model, df_items, df_damage_bin_dict
-
-
-def get_output_loss(loss_output_stream):
-    """
-    Set item output stream according to command line arguments.
-
-    :param loss_output_stream: command line argument for loss output stream
-    :dtype loss_output_stream: str
-
-    :return: item output stream
-    :dtype: stdout or file object
-    """
-
-    if loss_output_stream == '-':
-        output_loss = output_stdout
-    else:
-        output_loss = open(loss_output_stream, 'wb')
-
-    return output_loss
-
-
-def random_number_generation(event_id, group_id, number_of_samples):
-    """
-    Assign 32-bit number as seed to Mersenne Twister random number generator
-    and return list of random number of length equal to number of samples. Set
-    up for independance between groups. Samples from a uniform distribution.
-
-    :param event_id: event ID
-    :dtype event_id: int
-
-    :param group_id: group ID
-    :dtype group_id: int
-
-    :param number_of_samples: number of samples
-    :dtype number_of_samples: int
-
-    :return: array of random numbers sampled from uniform distribution
-    :dtype: numpy.ndarray
-    """
-
-    # Calculate and assign 32-bit number as seed to Mersenne Twister random
-    # number generator
-    rng_seed = (group_id * 1543270363) % 2147483648
-    rng_seed += (event_id * 1943272559) % 2147483648
-    rng_seed %= 2147483648
-    rng = np.random.Generator(np.random.MT19937(seed=rng_seed))
-
-    return rng.uniform(size=number_of_samples)
-
-
-def calculate_guls(row):
-    """
-    Calculate Ground Up Losses (GULs) for each sample. In this example, all bin
-    means lie in the centre of their bins, and therefore the case when this is
-    not true has not been included. This simplifies the function.
-
-    :param row: sample parameters
-    :dtype row: pandas Series
-
-    :return: Ground Up Loss (GUL) value for sample
-    :dtype: float
-    """
-
-    if row['bin_from'] == row['bin_to']:
-        return row['bin_to'] * row['tiv']
-    else:
-        return (
-            row['bin_from'] + (
-                (row['rand'] - row['prob_from']) / (row['bin_height'])
-            ) * (row['bin_width'])
-        ) * row['tiv']
-
-
-def gul_calc(
-    number_of_samples, df_model, df_items, df_damage_bin_dict, static_dir
-):
-    """
-    Build dataframe to calculate Group Up Losses (GULs) for all samples.
-
-    :param number_of_samples: number of samples
-    :dtype number_of_samples: int
-
-    :param df_model: summary of model data required to calculate ground up losses
-    :dtype df_model: pandas.DataFrames
-
-    :param df_items: contents of items file
-    :dtype df_items: pandas.DataFrame
-
-    :param df_damage_bin_dict: contents of damage bin dictionary file
-    :dtype df_damage_bin_dict: pandas.DataFrame
-
-    :param static_dir: static directory
-    :dtype static_dir: str
-
-    :return: Group Up Losses for all samples
-    :dtype: pandas.DataFrame
-    """
-
-    # Preserve order by shuffled event_id
-    df_model['order'] = pd.factorize(df_model['event_id'])[0]
-
-    # Merge items dataframe and restore initial order
-    df_items.rename(columns={'area_peril_id': 'areaperil_id'}, inplace=True)
-    df_model = pd.merge(
-        df_model, df_items, how='inner', on=['areaperil_id', 'vulnerability_id']
-    )
-    # Drop unrequired columns to free memory
-    df_model.drop(['areaperil_id', 'vulnerability_id'], axis=1, inplace=True)
-
-    # Merge TIVs from coverages file
-    df_coverages = check_bin_file_exists_and_read_it(
-        'Coverages', os.path.join(static_dir, 'coverages.bin'), 'coveragetocsv'
-    )
-    df_model = pd.merge(df_model, df_coverages, how='inner', on='coverage_id')
-    df_model.sort_values(
-            by=['order', 'item_id', 'bin_index'], ascending=True, inplace=True
+    return (
+        np.array(item_ids, np.int32),
+        np.array(coverage_ids, np.uint32),
+        np.array(group_ids, np.uint32),
+        np.array(area_peril_ids, np.int32),
     )
 
-    # First step towards calculating mean and standard deviation for each
-    # (event_id, item_id) pair
-    df_model['prob_from'] = df_model.groupby(
-        ['order', 'item_id']
-    )['prob_to'].shift(1).fillna(0.0)
-    df_model['bin_height'] = df_model.apply(
-        lambda x: x.prob_to - x.prob_from, axis=1
-    )
-    df_model['mean_1'] = df_model['bin_height'] * df_model['bin_mean'] * df_model['tiv']
-    df_model['std_1'] = df_model['mean_1'] * df_model['bin_mean'] * df_model['tiv']
 
-    # Construct GUL samples dataframe
-    df_gul = df_model[
-        ['event_id', 'order', 'item_id', 'coverage_id', 'group_id', 'tiv']
-    ].drop_duplicates()
-    sidx_ls = [-3, -2, -1] + [i+1 for i in range(number_of_samples)]
-    number_of_gul_combinations = len(df_gul)
-    df_gul = pd.DataFrame({
-        col: np.repeat(
-            df_gul[col].values, len(sidx_ls)
-        ) for col in df_gul.columns
-    })
-    df_gul['sidx'] = sidx_ls * number_of_gul_combinations
-    df_gul['loss'] = 0.0   # Initialise losses for all sample indexes (sidx)
-    # Mean sidx = -1
-    df_gul.loc[df_gul['sidx'] == -1, 'loss'] = df_model.groupby(
-        ['event_id', 'item_id']
-    ).sum()['mean_1'].to_numpy()
-    # Standard deviation sidx = -2
-    df_gul.loc[df_gul['sidx'] == -2, 'loss'] = np.sqrt(
-        df_model.groupby(
-            ['event_id', 'item_id']
-        ).sum()['std_1'].to_numpy() - df_gul.loc[df_gul['sidx'] == -1, 'loss'] ** 2
-    ).fillna(0.0).to_numpy()
-    # Drop unrequired columns from df_model to free memory
-    df_model.drop(
-        ['order', 'coverage_id', 'group_id', 'tiv', 'mean_1', 'std_1'], axis=1,
-        inplace=True
-    )
-
-    # Random numbers for all samples (i.e. sidx > 0)
-    df_gul['rand'] = 0.0
-    for idx, row in df_gul[
-        ['event_id', 'item_id', 'group_id']
-    ].drop_duplicates().iterrows():
-        eve_id = row['event_id']
-        it_id = row['item_id']
-        gr_id = row['group_id']
-        df_gul.loc[
-            (df_gul['event_id'] == eve_id) & (df_gul['item_id'] == it_id) & (df_gul['group_id'] == gr_id) & (df_gul['sidx'] > 0),
-            'rand'
-        ] = random_number_generation(eve_id, gr_id, number_of_samples)
-
-    # Get location on CDF
-    df_gul = pd.merge(df_gul, df_model, how='left', on=['event_id', 'item_id'])
-    del df_model   # Unrequired: delete to free memory
-    df_gul = df_gul[
-        (df_gul['rand'] < df_gul['prob_to']) & (df_gul['rand'] >= df_gul['prob_from'])
-    ]
-    df_gul = pd.merge(
-        df_gul,
-        df_damage_bin_dict[['bin_index', 'bin_from', 'bin_to']],
-        how='inner', on='bin_index'
-    )
-    del df_damage_bin_dict   # Unrequired: delete to free memory
-    df_gul['bin_width'] = df_gul['bin_to'] - df_gul['bin_from']
-    df_gul.sort_values(
-        by=['order', 'item_id', 'sidx'], ascending=True, inplace=True
-    )
-
-    # Calculate GULs
-    df_gul.loc[df_gul['sidx'] > 0, 'loss'] = df_gul[df_gul['sidx'] > 0].apply(
-        calculate_guls, axis=1
-    )
-
-    # Calculate tiv_idx sidx = -3
-    df_items_per_coverage = df_gul[
-        ['event_id', 'item_id', 'coverage_id']
-    ].drop_duplicates().groupby(['event_id', 'coverage_id']).count()
-    df_items_per_coverage.rename(
-        columns={'item_id': 'item_count'}, inplace=True
-    )
-    df_items_per_coverage.reset_index(inplace=True)
-    df_gul = pd.merge(
-        df_gul, df_items_per_coverage, how='inner',
-        on=['event_id', 'coverage_id']
-    )
-    df_gul.loc[df_gul['sidx'] == -3, 'loss'] = df_gul['tiv'] / df_gul['item_count']
-
-    # Implement GUL alloc rule 1
-    # If total loss exceeds TIV, split TIV in same proportions as losses
-    df_gul['total_loss'] = df_gul.groupby(
-        ['event_id', 'coverage_id', 'sidx']
-    )['loss'].transform('sum')
-    df_gul.loc[
-        df_gul['total_loss'] > df_gul['tiv'], ['loss']
-    ] = df_gul['tiv'] * df_gul['loss'] / df_gul['total_loss']
-
-    # Drop all but required columns
-    gul_req_cols = ['event_id', 'item_id', 'sidx', 'loss']
-    df_gul.drop(
-        [col for col in df_gul.columns if col not in gul_req_cols], axis=1,
-        inplace=True
-    )
-
-    return df_gul
-
-
-def write_loss_stream(loss_output_stream, number_of_samples, df_gul):
+def load_footprint(static_dir):
     """
-    Write loss stream to binary file in format expected by ktools exectuable
-    summarycalc.
+    Memory-map footprint.bin and load the index from footprint.idx.
 
-    :param loss_output_stream: loss output stream
-    :dtype loss_output_stream: stdpout or file object
+    footprint.bin layout:
+      [num_intensity_bins (i4), has_intensity_uncertainty (i4)]   <- 8-byte header
+      [areaperil_id (u4), intensity_bin_id (i4), probability (f4)] * N
 
-    :param number_of_samples: number of samples
-    :dtype number_of_samples: int
+    footprint.idx layout:
+      [event_id (i4), offset (i8), size (i8)] * M
+      where offset/size are byte positions in footprint.bin.
 
-    :param df_gul: Ground Up Losses (GULs) for all samples
-    :dtype df_gul: pandas.DataFrame
+    Returns (fp_data, fp_idx_map, num_intensity_bins):
+      fp_data       — full footprint record array
+      fp_idx_map    — dict event_id -> index entry
+      num_intensity_bins — number of intensity bins (for normalisation)
     """
+    with open(os.path.join(static_dir, 'footprint.bin'), 'rb') as f:
+        num_intensity_bins = struct.unpack('<i', f.read(4))[0]
+        f.read(4)
+        fp_data = np.frombuffer(f.read(), dtype=_FP_RECORD_DTYPE).copy()
 
-    # Handle loss output stream
-    output_loss = get_output_loss(loss_output_stream)
+    fp_idx = np.fromfile(os.path.join(static_dir, 'footprint.idx'), dtype=_FP_IDX_DTYPE)
+    fp_idx_map = {int(r['event_id']): r for r in fp_idx}
 
-    # Write loss output stream header
-    loss_stream_id = (2 << 24) | 1
-    output_loss.write(struct.pack('i', loss_stream_id))
-    output_loss.write(struct.pack('i', number_of_samples))
+    return fp_data, fp_idx_map, num_intensity_bins
 
-    for event_id, item_id in df_gul[['event_id', 'item_id']].drop_duplicates().to_numpy():
-        output_loss.write(struct.pack('i', event_id))
-        output_loss.write(struct.pack('i', item_id))
-        for row in df_gul[(df_gul['event_id'] == event_id) & (df_gul['item_id'] == item_id)].itertuples(index=False):
-            output_loss.write(struct.pack('i', row[2]))   # sidx
-            output_loss.write(struct.pack('f', row[3]))   # loss
-        output_loss.write(struct.pack('i', 0))
-        output_loss.write(struct.pack('f', 0.0))
 
+def event_intensity_by_areaperil(fp_data, fp_idx_entry, num_intensity_bins):
+    """
+    For one event, compute probability-weighted mean intensity per areaperil_id,
+    normalised to [0, 1].
+
+    Returns (ap_ids, intensities) — parallel sorted arrays.
+    """
+    rec_size = _FP_RECORD_DTYPE.itemsize
+    start = (int(fp_idx_entry['offset']) - _FP_HEADER_SIZE) // rec_size
+    n = int(fp_idx_entry['size']) // rec_size
+    records = fp_data[start:start + n]
+
+    if records.size == 0:
+        return np.empty(0, np.uint32), np.empty(0, np.float32)
+
+    ap_ids, inv = np.unique(records['areaperil_id'], return_inverse=True)
+    weighted = np.bincount(inv,
+                           weights=records['intensity_bin_id'] * records['probability'],
+                           minlength=len(ap_ids))
+    return ap_ids, (weighted / num_intensity_bins).astype(np.float32)
+
+
+def map_intensity_to_items(area_peril_ids, ap_ids, intensities):
+    """
+    Vectorised lookup: for each item's area_peril_id find its event intensity.
+
+    Uses searchsorted on the sorted ap_ids array returned by np.unique.
+    Items whose area_peril_id is not in ap_ids get intensity 0.
+    """
+    pos = np.searchsorted(ap_ids, area_peril_ids)
+    pos = np.clip(pos, 0, len(ap_ids) - 1)
+    found = ap_ids[pos] == area_peril_ids
+    return np.where(found, intensities[pos], 0.0).astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+# GUL calculation
+# ---------------------------------------------------------------------------
+
+def compute_guls(event_id, group_ids, tivs, intensity_fracs, n_samples):
+    """
+    Vectorised GUL calculation for all active items in one event.
+
+    Simple loss model:
+      sample = intensity_frac * U[0,1] * tiv
+      mean   = intensity_frac * tiv             (sidx = -1)
+      std    = tiv * sqrt(intensity_frac / 3)   (uniform distribution std)
+      tiv    = tiv                              (sidx = -3, TIV index)
+
+    All samples are capped at TIV.
+
+    Random numbers are generated in a single vectorised call seeded by event_id
+    (one stream per unique group_id). A production model would use per-group
+    MT19937 seeding for full correlation control.
+
+    Returns sample_losses (n_items × n_samples), mean_losses (n_items,),
+            std_losses (n_items,).
+    """
+    unique_gids, inv = np.unique(group_ids, return_inverse=True)
+    rand_matrix = np.random.default_rng(event_id).uniform(
+        size=(len(unique_gids), n_samples)
+    ).astype(np.float32)
+
+    item_rands = rand_matrix[inv]                                           # (n_items, n_samples)
+    f = intensity_fracs[:, np.newaxis]                                      # (n_items, 1)
+    t = tivs[:, np.newaxis]                                                 # (n_items, 1)
+
+    sample_losses = np.minimum(f * item_rands * t, t).astype(np.float32)   # (n_items, n_samples)
+    mean_losses = (intensity_fracs * tivs).astype(np.float32)
+    std_losses = (tivs * np.sqrt(np.maximum(intensity_fracs / 3.0, 0))).astype(np.float32)
+
+    return sample_losses, mean_losses, std_losses
+
+
+# ---------------------------------------------------------------------------
+# Binary stream output
+# ---------------------------------------------------------------------------
+
+def write_event_to_stream(out, event_id, item_ids, tivs, mean_losses, std_losses, sample_losses):
+    """
+    Write one event's GUL records to the output stream.
+
+    Per-item binary layout (all fields 4 bytes, little-endian):
+      event_id (i4)  item_id (i4)
+      sidx=-3 (i4)   tiv (f4)
+      sidx=-2 (i4)   std (f4)
+      sidx=-1 (i4)   mean (f4)
+      sidx=1  (i4)   sample_1 (f4)
+      ...
+      sidx=n  (i4)   sample_n (f4)
+      0       (i4)   0.0 (f4)          <- terminator
+    """
+    n_items = len(item_ids)
+    n_samples = sample_losses.shape[1]
+    n_pairs = 3 + n_samples + 1     # sidx=-3,-2,-1, 1..n, terminator
+
+    sidxs = np.array([-3, -2, -1] + list(range(1, n_samples + 1)) + [0], dtype='<i4')
+
+    # losses_matrix: (n_items, n_pairs) — tiv, std, mean, samples..., 0.0
+    losses_matrix = np.hstack([
+        tivs[:, np.newaxis],
+        std_losses[:, np.newaxis],
+        mean_losses[:, np.newaxis],
+        sample_losses,
+        np.zeros((n_items, 1), dtype=np.float32),
+    ]).astype('<f4')
+
+    # Interleave sidx (i4) and loss (f4) columns as raw u4 bytes
+    interleaved = np.empty((n_items, 2 * n_pairs), dtype='<u4')
+    interleaved[:, 0::2] = sidxs.view('<u4')
+    interleaved[:, 1::2] = losses_matrix.view('<u4')
+
+    # Prepend event_id and item_id header columns
+    headers = np.empty((n_items, 2), dtype='<i4')
+    headers[:, 0] = event_id
+    headers[:, 1] = item_ids
+
+    full = np.hstack([headers.view('<u4'), interleaved])
+    out.write(full.tobytes())
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def main():
-    """
-    Main function runs equivalent of eve | getmodel | gulcalc ktools stream.
-    """
-
-    # Parse arguments from command line
     args = parse_arguments()
-    (event_batch, max_event_batch) = args.event_batch
+    event_batch, max_event_batch = args.event_batch
     inputs_dir = args.inputs_directory
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(inputs_dir)), 'static')
 
-    # ktools eve equivalent
-    event_ids = get_event_ids(inputs_dir, event_batch, max_event_batch)
-
-    # Some model data files are in static directory
-    parent_dir = os.path.dirname(inputs_dir)
-    static_dir = os.path.join(parent_dir, 'static')
-
-    # ktools getmodel equivalent
-    df_model, df_items, df_damage_bin_dict = get_model(
-        event_ids, inputs_dir, static_dir
-    )
-
-    # Read settings from analysis settings JSON
-    analysis_settings = json.load(open(args.analysis_settings_file))
+    with open(args.analysis_settings_file) as f:
+        settings = json.load(f)
     try:
-        number_of_samples = analysis_settings['analysis_settings']['number_of_samples']
+        n_samples = settings['analysis_settings']['number_of_samples']
     except KeyError:
-        number_of_samples = analysis_settings['number_of_samples']
+        n_samples = settings['number_of_samples']
 
-    # ktools gulcalc equivalent
-    df_gul = gul_calc(
-        number_of_samples, df_model, df_items, df_damage_bin_dict,
-        static_dir
+    log.info('Loading complex items...')
+    item_ids, coverage_ids, group_ids, area_peril_ids = read_complex_items(
+        inputs_dir, args.complex_items_filename
     )
 
-    # Write loss stream to stdout or file
-    write_loss_stream(args.loss_output_stream, number_of_samples, df_gul)
+    coverages = np.fromfile(os.path.join(static_dir, 'coverages.bin'), dtype=_COVERAGES_DTYPE)
+    item_tivs = coverages[coverage_ids - 1]   # coverage_ids are 1-based
+
+    # Batch selection: shuffle all events with fixed seed then slice, matching
+    # the behaviour of the original implementation for reproducibility.
+    all_events = np.fromfile(os.path.join(inputs_dir, 'events.bin'), dtype=_EVENTS_DTYPE)['event_id']
+    np.random.seed(1234)
+    shuffled = np.random.choice(all_events, len(all_events), replace=False)
+    chunk = int(np.ceil(len(shuffled) / max_event_batch))
+    batch = shuffled[(event_batch - 1) * chunk: min(event_batch * chunk, len(shuffled))]
+
+    log.info('Loading footprint...')
+    fp_data, fp_idx_map, num_intensity_bins = load_footprint(static_dir)
+
+    out = sys.stdout.buffer if args.loss_output_stream == '-' else open(args.loss_output_stream, 'wb')
+    out.write(struct.pack('<ii', GUL_STREAM_ID, n_samples))
+
+    log.info(f'Processing batch {event_batch}/{max_event_batch} ({len(batch)} events)...')
+    for event_id in batch:
+        event_id = int(event_id)
+        if event_id not in fp_idx_map:
+            continue
+
+        ap_ids, intensities = event_intensity_by_areaperil(fp_data, fp_idx_map[event_id], num_intensity_bins)
+        item_intensities = map_intensity_to_items(area_peril_ids, ap_ids, intensities)
+
+        active = item_intensities > 0
+        if not np.any(active):
+            continue
+
+        sample_losses, mean_losses, std_losses = compute_guls(
+            event_id,
+            group_ids[active], item_tivs[active], item_intensities[active],
+            n_samples,
+        )
+
+        write_event_to_stream(
+            out, event_id,
+            item_ids[active], item_tivs[active],
+            mean_losses, std_losses, sample_losses,
+        )
+
+    if args.loss_output_stream != '-':
+        out.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
