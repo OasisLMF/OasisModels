@@ -1,8 +1,45 @@
+import difflib
 import filecmp
 import shutil
 from pathlib import Path
 
+import pandas as pd
 import pytest
+
+_NUMERIC_REL_TOL = 1e-4
+
+
+def _csv_diff(actual: Path, expected: Path) -> list[str] | None:
+    """Compare two CSV files with numeric tolerance via pandas.
+
+    Returns a list of diff strings, or None to fall back to text diff.
+    Empty list means equivalent within tolerance.
+    """
+    try:
+        df_a = pd.read_csv(actual)
+        df_e = pd.read_csv(expected)
+    except Exception:
+        return None
+
+    diffs = []
+
+    if df_a.shape != df_e.shape:
+        diffs.append(f"    shape: expected {df_e.shape}, got {df_a.shape}")
+        return diffs
+
+    if list(df_a.columns) != list(df_e.columns):
+        diffs.append(f"    columns: expected {list(df_e.columns)}, got {list(df_a.columns)}")
+        return diffs
+
+    for col in df_e.columns:
+        if pd.api.types.is_numeric_dtype(df_e[col]):
+            mask = ~((df_a[col] - df_e[col]).abs() <= _NUMERIC_REL_TOL * df_e[col].abs().clip(lower=1))
+        else:
+            mask = df_a[col] != df_e[col]
+        for idx in df_e.index[mask]:
+            diffs.append(f"    row {idx + 1} [{col}]: {df_e.at[idx, col]!r} → {df_a.at[idx, col]!r}")
+
+    return diffs
 
 
 def pytest_addoption(parser):
@@ -51,7 +88,30 @@ def _diff_dirs(actual: Path, expected: Path) -> list[str]:
         for name in cmp.right_only:
             diffs.append(f"  missing in output: {prefix}{name}")
         for name in cmp.diff_files:
+            if name.endswith(".csv"):
+                csv_diffs = _csv_diff(a / name, e / name)
+                if csv_diffs is None:
+                    pass  # fall through to text diff below
+                elif csv_diffs:
+                    diffs.append(f"  content differs:   {prefix}{name}")
+                    diffs.extend(csv_diffs)
+                else:
+                    continue  # within numeric tolerance — not a real diff
+                if csv_diffs is not None:
+                    continue
             diffs.append(f"  content differs:   {prefix}{name}")
+            try:
+                actual_lines = (a / name).read_text(errors="replace").splitlines(keepends=True)
+                expected_lines = (e / name).read_text(errors="replace").splitlines(keepends=True)
+                diff = difflib.unified_diff(
+                    expected_lines, actual_lines,
+                    fromfile=f"expected/{prefix}{name}",
+                    tofile=f"actual/{prefix}{name}",
+                    lineterm="",
+                )
+                diffs.extend(f"    {line}" for line in diff)
+            except Exception:
+                pass
         for sub in cmp.common_dirs:
             _walk(a / sub, e / sub, f"{prefix}{sub}")
 
