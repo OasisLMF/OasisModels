@@ -14,12 +14,12 @@ or to run everything::
     pytest -m ""
 """
 
-import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
+
+from tests.conftest import apply_results_flags
 
 # ---------------------------------------------------------------------------
 # Config discovery
@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).parent.parent
 SKIP_MODELS = [
     ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindS3", "requires S3 cloud credentials"),
-    ("PiWindComplexModel", "complex model not yet updated for current oasislmf"),
+    ("PiWindPostcode/test_2", "Exception: rehashed too many times --> bug in oasislmf"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
 ]
 
@@ -63,9 +63,11 @@ def _build_params():
     params = []
     for model_name, test_name, config_path in _collect_test_configs():
         marks = []
-        if model_name in _SKIP_REASONS:
+        param_id = _param_id(model_name, test_name)
+        skip_key = param_id if param_id in _SKIP_REASONS else model_name
+        if skip_key in _SKIP_REASONS:
             marks.append(pytest.mark.cloud)
-            marks.append(pytest.mark.skip(reason=_SKIP_REASONS[model_name]))
+            marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
         params.append(
             pytest.param(
                 config_path,
@@ -82,8 +84,9 @@ def _build_params():
 
 
 @pytest.mark.parametrize("config_path", _build_params())
-def test_model_run(config_path, tmp_path):
+def test_model_run(config_path, tmp_path, check_results, update_results):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
+    run_dir = tmp_path / "run"
     cmd = [
         "oasislmf",
         "model",
@@ -91,7 +94,7 @@ def test_model_run(config_path, tmp_path):
         "--config",
         str(config_path),
         "--model-run-dir",
-        str(tmp_path / "run"),
+        str(run_dir),
     ]
     result = subprocess.run(
         cmd,
@@ -100,10 +103,11 @@ def test_model_run(config_path, tmp_path):
     )
 
     if result.returncode != 0:
-        # Surface both streams to make failures easy to diagnose
         pytest.fail(
             f"oasislmf model run failed for {config_path}\n"
             f"--- re-run command ---\n{' '.join(cmd)}\n"
             f"--- stdout ---\n{result.stdout}\n"
             f"--- stderr ---\n{result.stderr}"
         )
+
+    apply_results_flags(run_dir, config_path.parent, check_results, update_results)
