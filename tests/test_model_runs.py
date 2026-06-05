@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).parent.parent
 SKIP_MODELS = [
     ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindS3", "requires S3 cloud credentials"),
-    #("PiWindComplexModel", "complex model not yet updated for current oasislmf"),
+    ("PiWindPostcode/test_2", "Exception: rehashed too many times --> bug in oasislmf"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
 ]
 
@@ -63,9 +63,11 @@ def _build_params():
     params = []
     for model_name, test_name, config_path in _collect_test_configs():
         marks = []
-        if model_name in _SKIP_REASONS:
+        param_id = _param_id(model_name, test_name)
+        skip_key = param_id if param_id in _SKIP_REASONS else model_name
+        if skip_key in _SKIP_REASONS:
             marks.append(pytest.mark.cloud)
-            marks.append(pytest.mark.skip(reason=_SKIP_REASONS[model_name]))
+            marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
         params.append(
             pytest.param(
                 config_path,
