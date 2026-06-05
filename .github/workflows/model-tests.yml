@@ -45,5 +45,8 @@ jobs:
       - name: Install test dependencies
         run: pip install pytest
 
+      - name: Install Complex Model wrapper
+        run: cd PiWindComplexModel && pip install . 
+
       - name: Run model tests
         run: pytest tests/test_model_runs.py -v
