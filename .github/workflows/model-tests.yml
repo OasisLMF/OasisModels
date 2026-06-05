@@ -49,4 +49,17 @@ jobs:
         run: cd PiWindComplexModel && pip install . 
 
       - name: Run model tests
-        run: pytest tests/test_model_runs.py -v
+        run: pytest tests/test_model_runs.py -v --check-results
+
+      - name: Archive model logs
+        if: always()
+        run: |
+          find . -path "*/expected_results/log" -type d \
+            | tar -czf model-logs.tar.gz --files-from=-
+
+      - name: Upload model logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-logs-py${{ matrix.python-version }}
+          path: model-logs.tar.gz

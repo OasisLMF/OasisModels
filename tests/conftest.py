@@ -66,20 +66,20 @@ def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool
     - update=True  →  replace <test_dir>/expected_results/ with run_dir contents.
     - check=True   →  assert run_dir matches <test_dir>/expected_results/.
     """
-    expected = test_dir / "expected_results"
+    expected = test_dir / "expected_results" / "output"
 
     if update:
         if expected.exists():
             shutil.rmtree(expected)
-        shutil.copytree(run_dir, expected)
+        shutil.copytree(run_dir / "output", expected)
 
     if check:
         if not expected.exists():
             pytest.fail(
-                f"--check-results: no expected_results dir found at {expected}\n"
+                f"--check-results: no expected_results/output dir found at {expected}\n"
                 "Run with --update-results first to create it."
             )
-        diffs = _diff_dirs(run_dir, expected)
+        diffs = _diff_dirs(run_dir / "output", expected)
         if diffs:
             pytest.fail(
                 f"--check-results: output differs from {expected}\n"
