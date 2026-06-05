@@ -1,0 +1,89 @@
+{
+    "analysis_tag": "base_example",
+    "source_tag": "MDK",
+    "model_name_id": "PiWindPostcode",
+    "model_supplier_id": "OasisLMF",
+    "gul_threshold": 0,
+    "gul_output": true,
+    "model_settings": {
+        "event_set": "p",
+        "event_occurrence_id": "lt"
+    },
+    "gul_summaries": [
+        {
+            "id": 1,
+            "ord_output": {
+                "alt_period": true,
+                "elt_sample": true,
+                "ept_full_uncertainty_aep": true,
+                "ept_full_uncertainty_oep": true,
+                "parquet_format": false
+            }
+        }
+    ],
+    "il_output": true,
+    "il_summaries": [
+        {
+            "id": 1,
+            "ord_output": {
+                "alt_period": true,
+                "elt_sample": true,
+                "ept_full_uncertainty_aep": true,
+                "ept_full_uncertainty_oep": true,
+                "parquet_format": false
+            }
+        }
+    ],
+    "ri_output": false,
+    "ri_summaries": [],
+    "lookup_settings": {
+        "supported_perils": [
+            {
+                "id": "WSS",
+                "desc": "Single Peril: Storm Surge",
+                "peril_correlation_group": 1
+            },
+            {
+                "id": "WTC",
+                "desc": "Single Peril: Tropical Cyclone",
+                "peril_correlation_group": 2
+            },
+            {
+                "id": "WW1",
+                "desc": "Group Peril: Windstorm with storm surge"
+            },
+            {
+                "id": "WW2",
+                "desc": "Group Peril: Windstorm w/o storm surge"
+            }
+        ]
+    },
+    "correlation_settings": [
+        {
+            "peril_correlation_group": 1,
+            "damage_correlation_value": "0.7",
+            "hazard_correlation_value": "0.4"
+        },
+        {
+            "peril_correlation_group": 2,
+            "damage_correlation_value": "0.5",
+            "hazard_correlation_value": "0.2"
+        }
+    ],
+    "data_settings": {
+        "damage_group_fields": [
+            "PortNumber",
+            "AccNumber",
+            "LocNumber"
+        ],
+        "hazard_group_fields": [
+            "PortNumber",
+            "AccNumber",
+            "LocNumber"
+        ]
+    },
+    "model_default_samples": 10,
+    "rl_output": false,
+    "rl_summaries": [],
+    "number_of_samples": 10
+}
