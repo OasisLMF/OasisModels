@@ -49,12 +49,12 @@ jobs:
         run: cd PiWindComplexModel && pip install . 
 
       - name: Run model tests
-        run: pytest tests/test_model_runs.py -v --check-results
+        run: pytest tests/test_model_runs.py -v --check-results --basetemp=pytest-tmp
 
       - name: Archive model logs
         if: always()
         run: |
-          find . -path "*/expected_results/log" -type d \
+          find pytest-tmp -path "*/run/log" -type d \
             | tar -czf model-logs.tar.gz --files-from=-
 
       - name: Upload model logs
