@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).parent.parent
 SKIP_MODELS = [
     ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindS3", "requires S3 cloud credentials"),
-    ("PiWindComplexModel", "complex model not yet updated for current oasislmf"),
+    #("PiWindComplexModel", "complex model not yet updated for current oasislmf"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
 ]
 
