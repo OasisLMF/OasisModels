@@ -9,15 +9,19 @@ import pytest
 _NUMERIC_REL_TOL = 1e-4
 
 
-def _csv_diff(actual: Path, expected: Path) -> list[str] | None:
-    """Compare two CSV files with numeric tolerance via pandas.
+_TABULAR_SUFFIXES = {".csv", ".parquet"}
+
+
+def _tabular_diff(actual: Path, expected: Path) -> list[str] | None:
+    """Compare two tabular files (CSV or parquet) with numeric tolerance via pandas.
 
     Returns a list of diff strings, or None to fall back to text diff.
     Empty list means equivalent within tolerance.
     """
     try:
-        df_a = pd.read_csv(actual)
-        df_e = pd.read_csv(expected)
+        reader = pd.read_parquet if actual.suffix == ".parquet" else pd.read_csv
+        df_a = reader(actual)
+        df_e = reader(expected)
     except Exception:
         return None
 
@@ -88,16 +92,16 @@ def _diff_dirs(actual: Path, expected: Path) -> list[str]:
         for name in cmp.right_only:
             diffs.append(f"  missing in output: {prefix}{name}")
         for name in cmp.diff_files:
-            if name.endswith(".csv"):
-                csv_diffs = _csv_diff(a / name, e / name)
-                if csv_diffs is None:
+            if Path(name).suffix in _TABULAR_SUFFIXES:
+                tab_diffs = _tabular_diff(a / name, e / name)
+                if tab_diffs is None:
                     pass  # fall through to text diff below
-                elif csv_diffs:
+                elif tab_diffs:
                     diffs.append(f"  content differs:   {prefix}{name}")
-                    diffs.extend(csv_diffs)
+                    diffs.extend(tab_diffs)
                 else:
                     continue  # within numeric tolerance — not a real diff
-                if csv_diffs is not None:
+                if tab_diffs is not None:
                     continue
             diffs.append(f"  content differs:   {prefix}{name}")
             try:
