@@ -54,7 +54,7 @@ jobs:
       - name: Archive model logs
         if: always()
         run: |
-          find pytest-tmp -path "*/run/log" -type d \
+          find pytest-tmp -path "*/run/*" -type d \
             | tar -czf model-logs.tar.gz --files-from=-
 
       - name: Upload model logs
