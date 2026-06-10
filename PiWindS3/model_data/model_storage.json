@@ -1,7 +1,7 @@
 {
-    "storage_class": "oasis_data_manager.filestore.backends.aws_s3.AwsS3Storage",
+    "storage_class": "oasis_data_manager.filestore.backends.aws.AwsS3Storage",
     "options":{
-        "bucket_name": "oasislmf-model-library-oasis-piwind/model_data",
+        "bucket_name": "oasislmf-model-library-oasis-piwind/OasisPiWind/model_data/PiWind",
         "region_name": "eu-west-1"
     }
 }

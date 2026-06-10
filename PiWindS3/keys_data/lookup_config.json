@@ -6,9 +6,9 @@
     },
     "builtin_lookup_type": "new_lookup",
     "keys_data_storage": {
-        "storage_class": "oasis_data_manager.filestore.backends.aws_s3.AwsS3Storage",
+        "storage_class": "oasis_data_manager.filestore.backends.aws.AwsS3Storage",
         "options":{
-            "bucket_name": "oasislmf-model-library-oasis-piwind/keys_data",
+            "bucket_name": "oasislmf-model-library-oasis-piwind/OasisPiWind/keys_data/PiWind",
             "region_name": "eu-west-1"
         }
     },
