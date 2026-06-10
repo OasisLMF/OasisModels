@@ -19,6 +19,10 @@ on:
         description: 'oasis-data-manager git branch to install (leave empty to skip)'
         required: false
         default: ''
+      pytest_params:
+        description: 'Extra pytest parameters (e.g. -k testname)'
+        required: false
+        default: ''
 
 jobs:
   run-model-tests:
@@ -57,7 +61,7 @@ jobs:
         run: cd PiWindComplexModel && pip install . 
 
       - name: Run model tests
-        run: pytest tests/test_model_runs.py -v --check-results --basetemp=pytest-tmp
+        run: pytest tests/test_model_runs.py -v --check-results --basetemp=pytest-tmp ${{ inputs.pytest_params }}
 
       - name: Archive model logs
         if: always()
