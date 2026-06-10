@@ -51,7 +51,7 @@ jobs:
         run: pip install "git+https://github.com/OasisLMF/oasis-data-manager.git@${{ inputs.oasis_data_manager_branch }}"
 
       - name: Install test dependencies
-        run: pip install pytest
+        run: pip install pytest s3fs
 
       - name: Install Complex Model wrapper
         run: cd PiWindComplexModel && pip install . 
