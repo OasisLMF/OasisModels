@@ -2,6 +2,7 @@
     "storage_class": "oasis_data_manager.filestore.backends.aws.AwsS3Storage",
     "options":{
         "bucket_name": "oasislmf-model-library-oasis-piwind-ci-testing/model_data",
-        "region_name": "eu-west-1"
+        "region_name": "eu-west-1",
+        "public_bucket": true
     }
 }
