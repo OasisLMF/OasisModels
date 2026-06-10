@@ -48,7 +48,7 @@ jobs:
 
       - name: Install oasis-data-manager (git branch)
         if: ${{ inputs.oasis_data_manager_branch }}
-        run: pip install "git+https://github.com/OasisLMF/oasis-data-manager.git@${{ inputs.oasis_data_manager_branch }}"
+        run: pip install "git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch }}"
 
       - name: Install test dependencies
         run: pip install pytest s3fs
