@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).parent.parent
 # Models to skip, as (model_name, reason) tuples
 SKIP_MODELS = [
     ("PiWindAzure", "requires Azure cloud credentials"),
-    ("PiWindS3", "requires S3 cloud credentials"),
+    #("PiWindS3", "requires S3 cloud credentials"),
     ("PiWindPostcode/test_2", "Exception: rehashed too many times --> bug in oasislmf"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
 ]
