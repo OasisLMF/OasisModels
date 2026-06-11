@@ -36,15 +36,18 @@
         }
     ],
     "ri_output": false,
+    "version": "3",
     "lookup_settings": {
         "supported_perils": [
             {
                 "id": "WSS",
-                "desc": "Single Peril: Storm Surge"
+                "desc": "Single Peril: Storm Surge",
+                "peril_correlation_group": 1
             },
             {
                 "id": "WTC",
-                "desc": "Single Peril: Tropical Cyclone"
+                "desc": "Single Peril: Tropical Cyclone",
+                "peril_correlation_group": 2
             },
             {
                 "id": "WW1",
@@ -56,8 +59,25 @@
             }
         ]
     },
+    "correlation_settings": [
+        {
+            "peril_correlation_group": 1,
+            "damage_correlation_value": "0.7",
+            "hazard_correlation_value": "0.0"
+        },
+        {
+            "peril_correlation_group": 2,
+            "damage_correlation_value": "0.5",
+            "hazard_correlation_value": "0.0"
+        }
+    ],
     "data_settings": {
         "damage_group_fields": [
+            "PortNumber",
+            "AccNumber",
+            "LocNumber"
+        ],
+        "hazard_group_fields": [
             "PortNumber",
             "AccNumber",
             "LocNumber"
