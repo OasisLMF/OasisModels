@@ -48,11 +48,11 @@ jobs:
 
       - name: Install ODS_Tools (git branch)
         if: ${{ inputs.ods_branch }}
-        run: pip install "git+https://github.com/OasisLMF/ODS_Tools.git@${{ inputs.ods_branch }}"
+        run: pip uninstall ods-tools -y && pip install "git+https://github.com/OasisLMF/ODS_Tools.git@${{ inputs.ods_branch }}"
 
       - name: Install oasis-data-manager (git branch)
         if: ${{ inputs.oasis_data_manager_branch }}
-        run: pip install "git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch }}"
+        run: pip uninstall oasis-data-manager -y && pip install "git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch }}"
 
       - name: Install test dependencies
         run: pip install pytest s3fs
