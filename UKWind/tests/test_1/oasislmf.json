@@ -4,5 +4,5 @@
     "lookup_data_dir": "../../keys_data",
     "model_data_dir": "../../model_data",
     "model_settings_json": "../../meta_data/model_settings.json",
-    "oed_location_csv": "location_full.parquet"
+    "oed_location_csv": "SourceLocOEDPiWind.csv"
 }
