@@ -84,7 +84,7 @@ def _build_params():
 
 
 @pytest.mark.parametrize("config_path", _build_params())
-def test_model_run(config_path, tmp_path, check_results, update_results):
+def test_model_run(config_path, tmp_path, check_results, update_results, azurite_service):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
     run_dir = tmp_path / "run"
     cmd = [

@@ -55,7 +55,7 @@ jobs:
         run: pip uninstall oasis-data-manager -y && pip install "git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch }}"
 
       - name: Install test dependencies
-        run: pip install pytest s3fs
+        run: pip install pytest s3fs pytest-docker-compose azure-storage-blob
 
       - name: Install Complex Model wrapper
         run: cd PiWindComplexModel && pip install . 
