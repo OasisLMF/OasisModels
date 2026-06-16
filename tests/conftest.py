@@ -3,7 +3,7 @@ import filecmp
 import shutil
 from pathlib import Path
 
-pytest_plugins = ["docker_compose", "tests.azurite_setup"]
+pytest_plugins = ["tests.azurite_setup"]
 
 import pandas as pd
 import pytest
