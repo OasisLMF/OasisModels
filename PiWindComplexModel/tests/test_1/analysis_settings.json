@@ -1,54 +1,84 @@
 {
-    "analysis_tag": "base_example",
-    "source_tag": "MDK",
-    "model_name_id": "PiWind",
+    "version": "3",
+    "model_name_id": "PiWind_Complex_Model",
     "model_supplier_id": "OasisLMF",
     "gul_threshold": 0,
     "number_of_samples": 10,
     "gul_output": true,
+    "oed_version": "3.1.0",
     "model_settings": {
         "event_set": "p",
         "event_occurrence_id": "lt"
     },
     "gul_summaries": [
         {
-            "aalcalc": true,
-            "eltcalc": true,
             "id": 1,
-	    "oed_fields": ["PortNumber","AccNumber","LocNumber"],
-            "lec_output": true,
-            "leccalc": {
-                "full_uncertainty_aep": true,
-                "full_uncertainty_oep": true,
-                "return_period_file": true
+            "ord_output": {
+                "plt_sample": false,
+                "plt_quantile": false,
+                "plt_moment": false,
+                "elt_sample": false,
+                "elt_quantile": false,
+                "elt_moment": false,
+                "alt_period": true,
+                "ept_full_uncertainty_aep": false,
+                "ept_full_uncertainty_oep": false,
+                "ept_mean_sample_aep": false,
+                "ept_mean_sample_oep": false,
+                "ept_per_sample_mean_aep": false,
+                "ept_per_sample_mean_oep": false,
+                "psept_aep": false,
+                "psept_oep": false,
+                "return_period_file": false
             }
         }
     ],
+    
     "il_output": true,
     "il_summaries": [
         {
-            "aalcalc": true,
-            "eltcalc": true,
             "id": 1,
-            "lec_output": true,
-            "leccalc": {
-                "full_uncertainty_aep": true,
-                "full_uncertainty_oep": true,
-                "return_period_file": true
+            "ord_output": {
+                "plt_sample": false,
+                "plt_quantile": false,
+                "plt_moment": false,
+                "elt_sample": false,
+                "elt_quantile": false,
+                "elt_moment": false,
+                "alt_period": true,
+                "ept_full_uncertainty_aep": false,
+                "ept_full_uncertainty_oep": false,
+                "ept_mean_sample_aep": false,
+                "ept_mean_sample_oep": false,
+                "ept_per_sample_mean_aep": false,
+                "ept_per_sample_mean_oep": false,
+                "psept_aep": false,
+                "psept_oep": false,
+                "return_period_file": false
             }
         }
     ],
-    "ri_output": true,
+    "ri_output": false,
     "ri_summaries": [
         {
-            "aalcalc": true,
-            "eltcalc": true,
             "id": 1,
-            "lec_output": true,
-            "leccalc": {
-                "full_uncertainty_aep": true,
-                "full_uncertainty_oep": true,
-                "return_period_file": true
+            "ord_output": {
+                "plt_sample": false,
+                "plt_quantile": false,
+                "plt_moment": false,
+                "elt_sample": false,
+                "elt_quantile": false,
+                "elt_moment": false,
+                "alt_period": false,
+                "ept_full_uncertainty_aep": false,
+                "ept_full_uncertainty_oep": false,
+                "ept_mean_sample_aep": false,
+                "ept_mean_sample_oep": false,
+                "ept_per_sample_mean_aep": false,
+                "ept_per_sample_mean_oep": false,
+                "psept_aep": false,
+                "psept_oep": false,
+                "return_period_file": false
             }
         }
     ]

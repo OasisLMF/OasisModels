@@ -3,8 +3,7 @@ import json
 
 from oasislmf.utils import (
     coverages,
-    peril,
-)   
+)
 from oasislmf.utils.status import (
     OASIS_KEYS_SC,
     OASIS_KEYS_FL,
@@ -13,9 +12,14 @@ from oasislmf.utils.status import (
 )
 from oasislmf.preparation.lookup import OasisBaseKeysLookup
 
+PERILS = {
+        'tropical cyclone': 'WTC',
+        'storm surge': 'WSS'
+        }
+
 class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
 
-    def __init__(self, 
+    def __init__(self,
             keys_data_directory=None,
             supplier=None,
             model_name=None,
@@ -23,8 +27,8 @@ class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
             **kwargs):
 
         self._peril_ids = [
-            peril.PERILS['tropical cyclone']['id'],
-            peril.PERILS['storm surge']['id']
+            PERILS['tropical cyclone'],
+            PERILS['storm surge']
         ]
 
         self._coverage_types = [
@@ -39,7 +43,7 @@ class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
         message = "OK"
 
         if (
-            peril_id == peril.PERILS['tropical cyclone']['id'] and
+            peril_id == PERILS['tropical cyclone'] and
             coverage_type == coverages.COVERAGE_TYPES['buildings']['id']
         ):
             data = {
@@ -48,7 +52,7 @@ class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
             }
 
         elif (
-            peril_id == peril.PERILS['tropical cyclone']['id'] and
+            peril_id == PERILS['tropical cyclone'] and
             coverage_type == coverages.COVERAGE_TYPES['contents']['id']
         ):
             data = {
@@ -57,7 +61,7 @@ class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
             }
 
         elif (
-            peril_id == peril.PERILS['storm surge']['id'] and
+            peril_id == PERILS['storm surge'] and
             coverage_type == coverages.COVERAGE_TYPES['buildings']['id']
         ):
             data = {
@@ -66,7 +70,7 @@ class PiWindComplexModelKeysLookup(OasisBaseKeysLookup):
             }
 
         elif (
-            peril_id == peril.PERILS['storm surge']['id'] and
+            peril_id == PERILS['storm surge'] and
             coverage_type == coverages.COVERAGE_TYPES['contents']['id']
             ):
             data = {

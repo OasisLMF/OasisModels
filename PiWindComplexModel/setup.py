@@ -1,8 +1,7 @@
-from setuptools import setup
-import complex_model_wrapper
-import oasislmf.utils 
+from setuptools import setup, find_packages
 
 setup(
+    packages=find_packages(),
     name='OasisLMF_ComplexModelExample',
     version='1.0.0.0',
     entry_points={
