@@ -94,18 +94,24 @@ def test_model_run(config_path, tmp_path, check_results, update_results):
         "--model-run-dir",
         str(run_dir),
     ]
-    result = subprocess.run(
+    proc = subprocess.Popen(
         cmd,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
     )
+    output_lines = []
+    for line in proc.stdout:
+        output_lines.append(line)
+        print(line, end="", flush=True)
+    proc.wait()
+    output = "".join(output_lines)
 
-    if result.returncode != 0:
+    if proc.returncode != 0:
         pytest.fail(
             f"oasislmf model run failed for {config_path}\n"
             f"--- re-run command ---\n{' '.join(cmd)}\n"
-            f"--- stdout ---\n{result.stdout}\n"
-            f"--- stderr ---\n{result.stderr}"
+            f"--- output ---\n{output}"
         )
 
     apply_results_flags(run_dir, config_path.parent, check_results, update_results)
