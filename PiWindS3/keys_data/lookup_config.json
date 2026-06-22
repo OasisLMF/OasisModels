@@ -6,10 +6,11 @@
     },
     "builtin_lookup_type": "new_lookup",
     "keys_data_storage": {
-        "storage_class": "oasis_data_manager.filestore.backends.aws_s3.AwsS3Storage",
+        "storage_class": "oasis_data_manager.filestore.backends.aws.AwsS3Storage",
         "options":{
-            "bucket_name": "oasislmf-model-library-oasis-piwind/keys_data",
-            "region_name": "eu-west-1"
+            "bucket_name": "oasislmf-model-library-oasis-piwind-ci-testing/keys_data",
+            "region_name": "eu-west-1",
+            "public_bucket": true
         }
     },
     "step_definition": {
@@ -42,6 +43,13 @@
             "columns": ["peril_id", "coverage_type", "occupancycode"],
             "parameters": {"file_path": "vulnerability_dict.csv",
                            "id_columns": ["vulnerability_id"]
+                          }
+        },
+            "amplification": {
+            "type": "merge",
+            "columns": ["peril_id", "postalcode"],
+            "parameters": {"file_path": "%%KEYS_DATA_PATH%%/amplification_dict.csv",
+                           "id_columns": ["amplification_id"]
                           }
         }
     },

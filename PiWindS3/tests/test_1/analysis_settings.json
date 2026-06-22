@@ -35,17 +35,5 @@
             }
         }
     ],
-    "ri_output": true,
-    "ri_summaries": [
-        {
-            "id": 1,
-            "ord_output": {
-                "alt_period": true,
-                "elt_sample": true,
-                "ept_full_uncertainty_aep": true,
-                "ept_full_uncertainty_oep": true,
-                "parquet_format": false
-            }
-        }
-    ]
+    "ri_output": false
 }
