@@ -1,3 +1,3 @@
-## Test 1
+## Test 2
 
-This directory is a test for all locations in the PiWindAbsoluteDamage Model.
+This directory is a test for only 10 locations in the PiWindAbsoluteDamage Model.
