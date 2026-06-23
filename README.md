@@ -31,3 +31,6 @@ This is a simplified variant of the original PiWind model which has single peril
 
 ## PiWind Vulnerability Adjustments
 This model showcases how specific adjustments to the vulnerabilities can be introduced in `the analysis_settings.json` file. The `tests` folder contains three examples of the different ways the adjustments can be applied.
+
+## UK Wind Model
+A large-scale test model covering the whole of the UK, intended for performance and scalability testing. The model has 10,000 events covering 100,000 years of simulated wind losses. The example exposure in `tests/test_1` contains 20 million locations. Model data and exposure files are not bundled in the repository due to their size — run the `get_large_data.sh` script to pull them from S3 before running tests.
