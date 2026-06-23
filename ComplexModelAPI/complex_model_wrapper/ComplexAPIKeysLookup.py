@@ -23,7 +23,7 @@ class ComplexAPIKeysLookup(OasisBaseKeysLookup):
             **kwargs):
 
         self._peril_ids = [
-            peril.PERILS['earthquake']['id']
+            peril.PERILS['QEQ']['id']
         ]
 
         self._coverage_types = [
