@@ -17,6 +17,9 @@ This model expands upon the PiWind model with the absolute damage option. This o
 ## PiWind Complex Model
 This is a version of the PiWind model which uses the complex model integreation approach to generate ground up losses in a custoim module, which then sits in the workflow and replaces the standard ground up loss calculation from Oasis
 
+## PiCyber
+A cyber risk model built on the Oasis framework, using annual revenue as the exposure measure. It covers a single cyber peril with a standard vulnerability and area-peril lookup structure, making it a useful starting point for modelling cyber losses within the Oasis platform.
+
 ## PiWind Postcode
 This is a variant of the original PiWind model designed for running exposures whose locations are known at postcode level rather than by latitude and longitude. This model demonstrates the disaggregation features of Oasis.
 
