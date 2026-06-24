@@ -2,6 +2,9 @@
 Example Oasis models for use in demonstrations and testing
 
 
+## Complex Model API
+An example demonstrating how to integrate a custom Ground-Up Loss (GUL) calculation into the Oasis workflow via the complex model API. Rather than using the default ktools `gulcalc`, this model delegates loss generation to an external API hook, implemented here as an earthquake peril model covering buildings and contents. It is a useful reference for model providers who need to replace the standard GUL calculation with a proprietary or API-driven approach.
+
 ## Deterministic Model
 This is a single event model which allows users to apply deterministic losses to a portfolio, defining the damage factors in the OED location file. It is similar to the `exposure` feature in the oasislmf package, but can be deployed as a model in it's own right to model deterministic losses which can then be passed through the Oasis financial module.
 
