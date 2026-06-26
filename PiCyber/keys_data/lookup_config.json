@@ -1,0 +1,73 @@
+{
+    "model": {
+        "supplier_id": "OasisLMF",
+        "model_id": "PiCyber",
+        "model_version": "0.0.1"
+    },
+    "builtin_lookup_type": "new_lookup",
+    "keys_data_path": "./",
+    "step_definition": {
+        "coverage_type": {
+            "type": "prepare",
+            "parameters": {
+                "coverage_type": {
+                    "default": 10
+                }
+            }
+
+        },
+        "annual_revenue_map": {
+            "type": "interval_to_index",
+            "columns": [
+                "annualrevenue"
+            ],
+            "parameters": {
+                "sorted_array": "%%KEYS_DATA_PATH%%/AnnualRevenueMap.csv",
+                "value_column_name": "annualrevenue",
+                "index_column_name": "revenuecategory"
+            }
+        },
+        "area_peril": {
+            "type": "merge",
+            "columns": [
+                "revenuecategory",
+                "countrycode"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/area_peril_dict.csv",
+                "id_columns": ["area_peril_id"],
+                "usecols": [
+                    "revenuecategory",
+                    "countrycode",
+                    "area_peril_id",
+                    "peril_id"
+                ]
+
+            }
+        },
+        "vulnerability": {
+            "type": "merge",
+            "columns": [
+                "revenuecategory",
+                "countrycode"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/vulnerability_dict.csv",
+                "id_columns": ["vulnerability_id"],
+                "usecols": [
+                    "revenuecategory",
+                    "countrycode",
+                    "vulnerability_id",
+                    "peril_id"
+                ]
+
+            }
+        }
+    },
+    "strategy": [
+        "coverage_type",
+        "annual_revenue_map",
+        "area_peril",
+        "vulnerability"
+    ]
+}

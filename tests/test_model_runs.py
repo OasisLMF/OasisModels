@@ -31,6 +31,8 @@ REPO_ROOT = Path(__file__).parent.parent
 SKIP_MODELS = [
     ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
+    ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
+    ("UKWind", "requires large model data from S3 (run get_large_data.sh first)"),
 ]
 
 _SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}

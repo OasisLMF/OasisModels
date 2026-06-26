@@ -2,6 +2,9 @@
 Example Oasis models for use in demonstrations and testing
 
 
+## Complex Model API
+An example demonstrating how to integrate a custom Ground-Up Loss (GUL) calculation into the Oasis workflow via the complex model API. Rather than using the default ktools `gulcalc`, this model delegates loss generation to an external API hook, implemented here as an earthquake peril model covering buildings and contents. It is a useful reference for model providers who need to replace the standard GUL calculation with a proprietary or API-driven approach.
+
 ## Deterministic Model
 This is a single event model which allows users to apply deterministic losses to a portfolio, defining the damage factors in the OED location file. It is similar to the `exposure` feature in the oasislmf package, but can be deployed as a model in it's own right to model deterministic losses which can then be passed through the Oasis financial module.
 
@@ -17,6 +20,9 @@ This model expands upon the PiWind model with the absolute damage option. This o
 ## PiWind Complex Model
 This is a version of the PiWind model which uses the complex model integreation approach to generate ground up losses in a custoim module, which then sits in the workflow and replaces the standard ground up loss calculation from Oasis
 
+## PiCyber
+A cyber risk model built on the Oasis framework, using annual revenue as the exposure measure. It covers a single cyber peril with a standard vulnerability and area-peril lookup structure, making it a useful starting point for modelling cyber losses within the Oasis platform.
+
 ## PiWind Postcode
 This is a variant of the original PiWind model designed for running exposures whose locations are known at postcode level rather than by latitude and longitude. This model demonstrates the disaggregation features of Oasis.
 
@@ -31,3 +37,6 @@ This is a simplified variant of the original PiWind model which has single peril
 
 ## PiWind Vulnerability Adjustments
 This model showcases how specific adjustments to the vulnerabilities can be introduced in `the analysis_settings.json` file. The `tests` folder contains three examples of the different ways the adjustments can be applied.
+
+## UK Wind Model
+A large-scale test model covering the whole of the UK, intended for performance and scalability testing. The model has 10,000 events covering 100,000 years of simulated wind losses. The example exposure in `tests/test_1` contains 20 million locations. Model data and exposure files are not bundled in the repository due to their size — run the `get_large_data.sh` script to pull them from S3 before running tests.
