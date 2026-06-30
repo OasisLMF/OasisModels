@@ -39,7 +39,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install oasislmf (git branch)
-        run: pip install "oasislmf[extra] @ git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.ods_branch || 'main' }}"
+        run: pip install "oasislmf[extra] @ git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.oasislmf_branch || 'main' }}"
 
       - name: Install ODS_Tools (git branch)
         #if: ${{ inputs.ods_branch }}
