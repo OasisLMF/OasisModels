@@ -23,6 +23,14 @@ on:
         description: 'Extra pytest parameters (e.g. -k testname)'
         required: false
         default: ''
+      oasis_data_manager_branch:
+        description: 'oasis-data-manager git branch to install (leave empty to skip)'
+        required: false
+        default: ''
+      pytest_params:
+        description: 'Extra pytest parameters (e.g. -k testname)'
+        required: false
+        default: ''
 
 jobs:
   run-model-tests:
