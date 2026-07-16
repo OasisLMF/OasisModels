@@ -6,12 +6,11 @@ Executable walkthroughs of running the Oasis stack on the example models.
 :maxdepth: 1
 
 run-piwind-analysis
+pipeline-step-by-step
 ```
 
-```{admonition} Planned
-:class: note
-
-A **step-by-step** companion is planned: decompose the generated `run_kernel.sh`
-pipeline stage by stage (`modelpy → gulmc → fmpy → summarypy → eltpy/pltpy/lecpy/aalpy`),
-showing the intermediary bin/csv data flowing between each pytools tool.
-```
+- **{doc}`run-piwind-analysis`** — the high-level view: one `oasislmf model run` command
+  and analysis of the ORD outputs.
+- **{doc}`pipeline-step-by-step`** — under the hood: the generated `run_kernel.sh`
+  pipeline stage by stage (`evepy → gulmc → fmpy → summarypy → eltpy/…`) with the
+  intermediary bin/csv data flowing between each pytools tool.
