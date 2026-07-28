@@ -16,6 +16,8 @@ or to run everything::
 
 import subprocess
 from pathlib import Path
+import json
+import os
 
 import pytest
 
@@ -47,10 +49,15 @@ def _collect_test_configs():
         tests_dir = model_dir / "tests"
         if not tests_dir.is_dir():
             continue
+
         for test_dir in sorted(tests_dir.iterdir()):
             config = test_dir / "oasislmf.json"
+            env_file = test_dir / "env.json"
+            if not env_file.is_file():
+                env_file = None
+
             if config.is_file():
-                yield model_dir.name, test_dir.name, config
+                yield model_dir.name, test_dir.name, config, env_file
 
 
 def _param_id(model_name, test_name):
@@ -59,16 +66,21 @@ def _param_id(model_name, test_name):
 
 def _build_params():
     params = []
-    for model_name, test_name, config_path in _collect_test_configs():
+    for model_name, test_name, config_path, env_path in _collect_test_configs():
         marks = []
         param_id = _param_id(model_name, test_name)
         skip_key = param_id if param_id in _SKIP_REASONS else model_name
         if skip_key in _SKIP_REASONS:
             marks.append(pytest.mark.cloud)
             marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
+
+        test_config = {
+                "config_path": config_path,
+                "env_path": env_path
+                }
         params.append(
             pytest.param(
-                config_path,
+                test_config,
                 marks=marks,
                 id=_param_id(model_name, test_name),
             )
@@ -81,10 +93,12 @@ def _build_params():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("config_path", _build_params())
-def test_model_run(config_path, tmp_path, check_results, update_results):
+@pytest.mark.parametrize("test_config", _build_params())
+def test_model_run(test_config, tmp_path, check_results, update_results):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
     run_dir = tmp_path / "run"
+    config_path = test_config["config_path"]
+    env_path = test_config.get("env_path", None)
     cmd = [
         "oasislmf",
         "model",
@@ -94,11 +108,28 @@ def test_model_run(config_path, tmp_path, check_results, update_results):
         "--model-run-dir",
         str(run_dir),
     ]
+
+    new_env = None
+    if env_path is not None:
+        with open(env_path, 'r') as f:
+            new_env = dict(os.environ, **json.load(f))
+
+    if new_env is not None:
+        clear_cmd = ["oasislmf", "clearcache"]
+        proc = subprocess.Popen(
+                clear_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                )
+        proc.wait()
+
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=new_env,
     )
     output_lines = []
     for line in proc.stdout:
