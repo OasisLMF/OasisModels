@@ -1,0 +1,17 @@
+{
+    "model_settings":{
+        "event_set":{
+         },
+        "event_occurrence_id":{
+        }
+     },
+    "lookup_settings":{
+        "supported_perils":[
+           {"id": "QEQ", "desc": "Single Peril: Earthquake"}
+        ]
+    },
+    "data_settings": {
+	"group_fields": ["PortNumber", "AccNumber", "LocNumber"]
+    },
+    "model_default_samples" :10
+}
