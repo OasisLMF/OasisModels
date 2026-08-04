@@ -133,6 +133,8 @@ def test_model_run(test_config, tmp_path, check_results, update_results):
         with open(env_path, 'r') as f:
             new_env = dict(os.environ, **json.load(f))
 
+    output_lines = []
+
     if new_env is not None:
         clear_cmd = ["oasislmf", "clearcache"]
         proc = subprocess.Popen(
@@ -141,6 +143,9 @@ def test_model_run(test_config, tmp_path, check_results, update_results):
                 stderr=subprocess.STDOUT,
                 text=True,
                 )
+        for line in proc.stdout:
+            output_lines.append(line)
+            print(line, end="", flush=True)
         proc.wait()
 
     proc = subprocess.Popen(
@@ -150,7 +155,6 @@ def test_model_run(test_config, tmp_path, check_results, update_results):
         text=True,
         env=new_env,
     )
-    output_lines = []
     for line in proc.stdout:
         output_lines.append(line)
         print(line, end="", flush=True)
@@ -165,6 +169,9 @@ def test_model_run(test_config, tmp_path, check_results, update_results):
                 stderr=subprocess.STDOUT,
                 text=True,
                 )
+        for line in proc.stdout:
+            output_lines.append(line)
+            print(line, end="", flush=True)
         proc.wait()
     output = "".join(output_lines)
 
