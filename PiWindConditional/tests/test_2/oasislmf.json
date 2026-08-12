@@ -1,0 +1,9 @@
+{
+    "analysis_settings_json": "analysis_settings.json",
+    "lookup_config_json": "../../keys_data/lookup_config.json",
+    "lookup_data_dir": "../../keys_data",
+    "model_settings_json": "../../meta_data/model_settings.json",
+    "model_data_dir": "../../model_data",
+    "oed_location_csv": "SourceLocOEDPiWindConditional.csv",
+    "oed_accounts_csv": "SourceAccOEDPiWindConditional.csv"
+}

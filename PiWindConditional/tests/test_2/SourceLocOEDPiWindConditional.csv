@@ -1,0 +1,3 @@
+PortNumber,AccNumber,LocNumber,CountryCode,LocCurrency,Latitude,Longitude,LocPerilsCovered,BuildingTIV,ContentsTIV,OccupancyCode
+1,A,1,GB,GBP,52.737,-0.9146,WTC,0,500000,1000
+1,A,2,GB,GBP,52.738,-0.9150,WTC,0,400000,1000
