@@ -290,7 +290,7 @@ def main():
         inputs_dir, args.complex_items_filename
     )
 
-    coverages = np.fromfile(os.path.join(static_dir, 'coverages.bin'), dtype=_COVERAGES_DTYPE)
+    coverages = np.fromfile(os.path.join(inputs_dir, 'coverages.bin'), dtype=_COVERAGES_DTYPE)
     item_tivs = coverages[coverage_ids - 1]   # coverage_ids are 1-based
 
     # Batch selection: shuffle all events with fixed seed then slice, matching
