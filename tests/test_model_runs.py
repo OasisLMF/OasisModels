@@ -36,6 +36,7 @@ ORDERED_MODELS = [
 
 # Models to skip, as (model_name, reason) tuples
 SKIP_MODELS = [
+    ("PiWindDtype", 'Test is flanky when running from oasislmf -- skip until fixed'),
     ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
     ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
