@@ -17,6 +17,7 @@ or to run everything::
 import subprocess
 from pathlib import Path
 import json
+import hashlib
 import os
 
 import pytest
@@ -181,5 +182,16 @@ def test_model_run(test_config, tmp_path, check_results, update_results):
             f"--- re-run command ---\n{' '.join(cmd)}\n"
             f"--- output ---\n{output}"
         )
+
+    print("--- file hashes (diagnostic) ---", flush=True)
+    for sub in ("input", "output"):
+        d = run_dir / sub
+        if not d.is_dir():
+            continue
+        for f in sorted(d.rglob("*")):
+            if f.is_file():
+                digest = hashlib.sha256(f.read_bytes()).hexdigest()
+                print(f"{digest}  {f.relative_to(run_dir)}", flush=True)
+    print("--- end file hashes ---", flush=True)
 
     apply_results_flags(run_dir, config_path.parent, check_results, update_results)
