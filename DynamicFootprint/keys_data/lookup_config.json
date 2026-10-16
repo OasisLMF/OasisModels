@@ -27,6 +27,13 @@
                 "nearest_neighbor_min_distance": -1
             }
         },
+        "join_sections":{
+            "type": "join_rows",
+            "columns": ["section_id"],
+            "parameters": {
+                "columns": ["section_id"]
+            }
+        },
         "split_loc_perils_covered":{
             "type": "split_loc_perils_covered" ,
             "columns": ["locperilscovered"],
@@ -56,5 +63,5 @@
 	    }
         }
     },
-    "strategy": ["split_loc_perils_covered", "peril", "section", "create_coverage_type", "dynamic_model_adjustment", "vulnerability"]
+    "strategy": ["split_loc_perils_covered", "peril", "section", "join_sections", "create_coverage_type", "dynamic_model_adjustment", "vulnerability"]
 }
