@@ -17,8 +17,8 @@ Those cells are clear of tests/test_1's locations and of section 2143's polygon,
 along the grid's two diagonals: a point on them (col == row, or col + row == 9) can fall in or out
 of 2143 on the seventh decimal of its coordinates. A section is the union of the boxes of its cells.
 
-The lookup gives a location one row per section it falls in; the join_sections step (type
-join_rows) after the section rtree folds them into one keys value ('3001;3002').
+The lookup gives a location one keys row per section it falls in; OasisLMF combines the rows of
+an item that differ only in section_id into one ('3001;3002') when it builds the GUL inputs.
 
 The hazard case of the model has no probability column, so realisations are written as repeated
 rows: rows are weighted equally, and .25/.5/.25 is three values repeated 1, 2 and 1 times.

@@ -16,8 +16,9 @@ combination of one, two and three sections, each with no hazard uncertainty, the
 realisations everywhere, and different numbers between sections and return periods. Events 1-8
 drive them.
 
-The lookup's `join_sections` step (type `join_rows`), after the section rtree, gives a location
-lying in several sections one keys value (`3001;3002`). `tests/test_2` runs the 18 locations, one loss line each.
+The section rtree gives a location lying in several sections one keys row per section; OasisLMF
+combines the rows of an item that differ only in `section_id` into one (`3001;3002`) when it builds
+the GUL inputs. `tests/test_2` runs the 18 locations, one loss line each.
 
 - `make_confluence_data.py` adds the example to the model data and writes `tests/test_2/location.csv`;
   its docstring describes the layout. Running it again replaces what it added and nothing else.
