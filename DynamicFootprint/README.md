@@ -21,7 +21,9 @@ combines the rows of an item that differ only in `section_id` into one (`3001;30
 the GUL inputs. `tests/test_2` runs the 18 locations, one loss line each.
 
 - `make_confluence_data.py` adds the example to the model data and writes `tests/test_2/location.csv`;
-  its docstring describes the layout. Running it again replaces what it added and nothing else.
+  its docstring describes the layout. Running it again replaces what it added and nothing else,
+  except that it also sets EPSG:4326 on section 2143's polygon, which was saved without a CRS
+  (it is lon/lat like the rest of the keys data).
 - `show_confluence.py [--merge max|max_independent|sum] [event_id ...]` prints the footprint the
   installed OasisLMF builds for each event at those areaperils, without a model run.
 
