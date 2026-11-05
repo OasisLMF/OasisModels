@@ -36,7 +36,7 @@ ORDERED_MODELS = [
 
 # Models to skip, as (model_name, reason) tuples
 SKIP_MODELS = [
-    ("PiWindAzure", "requires Azure cloud credentials"),
+    #("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
     ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
     ("UKWind", "requires large model data from S3 (run get_large_data.sh first)"),
