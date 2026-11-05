@@ -30,16 +30,16 @@ def azurite_service():
     from testcontainers.core.container import DockerContainer
     from testcontainers.core.waiting_utils import wait_for_logs
 
-    with DockerContainer("mcr.microsoft.com/azure-storage/azurite") \
+    with DockerContainer("mcr.microsoft.com/azure-storage/azurite:3.35.0") \
             .with_command("azurite-blob --blobHost 0.0.0.0") \
             .with_exposed_ports(10000) as container:
-        wait_for_logs(container, "Azurite Blob service is successfully listening")
+        wait_for_logs(container, "Azurite Blob service successfully listens on")
         host = container.get_container_host_ip()
         port = container.get_exposed_port(10000)
         conn_str = (
             f"DefaultEndpointsProtocol=http;"
             f"AccountName=devstoreaccount1;"
-            f"AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OtO+kSHAHNaIQgFQAAFdtE0jDdqoiQqT6i0xqQpqHfNKOEFAAAABQk=;"
+            f"AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
             f"BlobEndpoint=http://{host}:{port}/devstoreaccount1;"
         )
         _seed_azurite(conn_str)
