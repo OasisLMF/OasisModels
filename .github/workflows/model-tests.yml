@@ -55,7 +55,7 @@ jobs:
 
       - name: Install oasis-data-manager (git branch)
         #if: ${{ inputs.oasis_data_manager_branch }}
-        run: pip uninstall oasis-data-manager -y && pip install "oasis-data-manager[azure] @ git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch  || 'main' }}"
+        run: pip uninstall oasis-data-manager -y && pip install "oasis-data-manager[azure] @ git+https://github.com/OasisLMF/OasisDataManager.git@${{ inputs.oasis_data_manager_branch  || 'fix/azure-env-connection-string' }}"
 
       - name: Install test dependencies
         run: pip install pytest s3fs testcontainers "azure-storage-blob==12.27.0"
