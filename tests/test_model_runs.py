@@ -36,13 +36,15 @@ ORDERED_MODELS = [
 
 # Models to skip, as (model_name, reason) tuples
 SKIP_MODELS = [
-    ("PiWindAzure", "requires Azure cloud credentials"),
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
     ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
     ("UKWind", "requires large model data from S3 (run get_large_data.sh first)"),
 ]
 
 _SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}
+
+# Models whose data is served from a local Azurite container (see tests/azurite_setup.py)
+AZURITE_MODELS = {"PiWindAzure"}
 
 
 def _collect_test_configs():
@@ -94,6 +96,7 @@ def _build_params():
             marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
 
         test_config = {
+                "model_name": model_name,
                 "config_path": config_path,
                 "env_path": env_path
                 }
@@ -113,8 +116,11 @@ def _build_params():
 
 
 @pytest.mark.parametrize("test_config", _build_params())
-def test_model_run(test_config, tmp_path, check_results, update_results):
+def test_model_run(test_config, tmp_path, check_results, update_results, request):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
+    if test_config["model_name"] in AZURITE_MODELS:
+        request.getfixturevalue("azurite_service")
+
     run_dir = tmp_path / "run"
     config_path = test_config["config_path"]
     env_path = test_config.get("env_path", None)
