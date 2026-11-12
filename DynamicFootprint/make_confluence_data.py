@@ -17,6 +17,13 @@ Those cells are clear of tests/test_1's locations and of section 2143's polygon,
 along the grid's two diagonals: a point on them (col == row, or col + row == 9) can fall in or out
 of 2143 on the seventh decimal of its coordinates. A section is the union of the boxes of its cells.
 
+They are not clear of 2143's hazard: its hazard case has rows at all 18 cells (intensities 5-10).
+The footprint merges every section an event drives at every areaperil of the portfolio, whichever
+section a location is in, so in a portfolio that also has locations in 2143, event 1 (which drives
+2143 and the confluence sections) merges 2143 into these cells too. With max that changes nothing,
+as the confluence sections are larger there; with sum every cell goes up. tests/test_2 has no
+location in 2143, so its results do not depend on it.
+
 The lookup gives a location one keys row per section it falls in; OasisLMF combines the rows of
 an item that differ only in section_id into one ('3001;3002') when it builds the GUL inputs.
 

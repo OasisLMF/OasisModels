@@ -9,6 +9,7 @@ import argparse
 
 import pandas as pd
 
+from oasislmf.pytools.getmodel.common import SECTION_MERGE_DEFAULT, SECTION_MERGE_OPTIONS
 from oasislmf.pytools.getmodel.footprint import FootprintParquetDynamic
 
 from make_confluence_data import EVENTS, MODEL_DATA, REGION_ROWS, SECTIONS, VARIANT_BY_COL, confluence_cells, grid
@@ -45,7 +46,7 @@ def main(event_ids, section_merge):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--merge', default='max', help='section merge option')
+    parser.add_argument('--merge', default=SECTION_MERGE_DEFAULT, choices=SECTION_MERGE_OPTIONS, help='section merge option')
     parser.add_argument('event_ids', nargs='*', type=int)
     args = parser.parse_args()
     main(args.event_ids or sorted(EVENTS), args.merge)
