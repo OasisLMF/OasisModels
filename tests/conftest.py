@@ -36,10 +36,12 @@ def _tabular_diff(actual: Path, expected: Path) -> list[str] | None:
         return diffs
 
     for col in df_e.columns:
+        both_na = df_a[col].isna() & df_e[col].isna()
         if pd.api.types.is_numeric_dtype(df_e[col]):
             mask = ~((df_a[col] - df_e[col]).abs() <= _NUMERIC_REL_TOL * df_e[col].abs().clip(lower=1))
         else:
             mask = df_a[col] != df_e[col]
+        mask = mask & ~both_na
         for idx in df_e.index[mask]:
             diffs.append(f"    row {idx + 1} [{col}]: {df_e.at[idx, col]!r} → {df_a.at[idx, col]!r}")
 
