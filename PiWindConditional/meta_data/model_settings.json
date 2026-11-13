@@ -1,0 +1,14 @@
+{
+    "model_settings": {
+        "event_set": {"name": "Event Set", "desc": "toy", "default": "p",
+            "options": [{"id": "p", "desc": "Probabilistic", "number_of_events": 10}]},
+        "event_occurrence_id": {"name": "Occurrence Set", "desc": "toy", "default": "lt",
+            "options": [{"id": "lt", "desc": "Long Term"}]},
+        "coverage_dependency_settings": [
+            {"source_coverage_type": 1, "dependent_coverage_type": 3}
+        ]
+    },
+    "lookup_settings": {"supported_perils": [{"id": "WTC", "desc": "Tropical Cyclone"}]},
+    "data_settings": {"damage_group_fields": ["PortNumber", "AccNumber", "LocNumber"]},
+    "model_default_samples": 100
+}
