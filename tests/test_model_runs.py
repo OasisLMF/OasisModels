@@ -40,6 +40,7 @@ SKIP_MODELS = [
     ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
     ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
     ("UKWind", "requires large model data from S3 (run get_large_data.sh first)"),
+    ("PiWindBlended/test_1", "blended areaperils not yet supported by gulmc; today the run passes with zero losses"),
 ]
 
 _SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}
