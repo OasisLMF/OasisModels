@@ -5,11 +5,10 @@
 Toy UK windstorm and storm surge model for exposures known only at postcode level, using
 **blended areaperils**.
 
-> **Status:** the blended run (`tests/test_1`) needs gulmc support for blended areaperils, which is
-> in development. Until it lands, oasislmf does not recognise `blended_areaperil_id.csv`, reads the
-> blended ids as cells with no hazard, and the run completes with zero losses. That test is skipped
-> in `tests/test_model_runs.py` for that reason. The collapsed comparison (`tests/test_2`) runs on
-> current oasislmf.
+> **Requires** an oasislmf with blended areaperil support (gulmc, and getmodel/gulpy for the
+> per-item marginal). An older oasislmf does not recognise `blended_areaperil_id.csv`, reads the
+> blended ids as cells with no hazard, and `tests/test_1` completes with zero losses, so its expected
+> results do not match.
 
 ## The idea
 
@@ -88,7 +87,7 @@ locations in the first two postcodes.
 
 | test | lookup | what it shows |
 |---|---|---|
-| `test_1` | `lookup_config_blended.json` | per-sample placement (needs engine support) |
+| `test_1` | `lookup_config_blended.json` | per-sample placement: each building stands at one position per sample, shared by its perils and coverages |
 | `test_2` | `lookup_config_collapsed.json` | the merged-footprint approach on the same data |
 
 Run either with `oasislmf model run -C oasislmf.json` from the test directory. Both use gulmc.

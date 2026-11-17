@@ -27,7 +27,7 @@ A cyber risk model built on the Oasis framework, using annual revenue as the exp
 This is a variant of the original PiWind model designed for running exposures whose locations are known at postcode level rather than by latitude and longitude. This model demonstrates the disaggregation features of Oasis.
 
 ## PiWind Blended
-A variant of PiWind Postcode for exposures known only at postcode level, using blended areaperils: each postcode is a set of candidate positions weighted by building counts, and the engine places each building at one position per sample, shared by every peril and coverage. Surge is on a coarser grid than wind, so positions are an overlay of the two grids. A collapsed postcode footprint built from the same weights is included as a comparison. Requires gulmc support for blended areaperils (in development).
+A variant of PiWind Postcode for exposures known only at postcode level, using blended areaperils: each postcode is a set of candidate positions weighted by building counts, and the engine places each building at one position per sample, shared by every peril and coverage. Surge is on a coarser grid than wind, so positions are an overlay of the two grids. A collapsed postcode footprint built from the same weights is included as a comparison. Requires an oasislmf with blended areaperil support.
 
 ## PiWind Post Loss Amplification
 This is a version of the PiWind model with post loss amplification factors applied. Major catastrophic events can give rise to inflated and/or deflated costs depending on that specific situation. To account for this, the ground up losses produced by the GUL calculation component are multiplied by post loss amplification factors, by the component plapy.
