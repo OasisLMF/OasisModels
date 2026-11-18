@@ -97,10 +97,6 @@ def pytest_addoption(parser):
              "Its workers must already be registered as OasisLMF/<Model>/<api-version>.",
     )
     group.addoption(
-        "--channel-layer", action="store_true", default=False,
-        help="Also start the redis channel layer (needed for server images older than 2.5.7).",
-    )
-    group.addoption(
         "--platform-debug", action="store_true", default=False,
         help="Run the platform containers with OASIS_DEBUG=1.",
     )

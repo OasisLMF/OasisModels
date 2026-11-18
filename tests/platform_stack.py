@@ -59,7 +59,7 @@ class PlatformCompose:
     """Wraps ``DockerCompose`` for one API variant and a set of model directories."""
 
     def __init__(self, server_image, worker_image, model_dirs, api_ver="v2", db="postgres",
-                 storage="shared-fs", debug=False, channel_layer=False, work_dir=None):
+                 storage="shared-fs", debug=False, work_dir=None):
         if api_ver not in API_VERSIONS:
             raise ValueError(f"api_ver must be one of {API_VERSIONS}, got '{api_ver}'")
         if db not in DATABASES:
@@ -72,7 +72,6 @@ class PlatformCompose:
         self.worker_image = worker_image
         self.api_ver = api_ver
         self.debug = debug
-        self.channel_layer = channel_layer
         self.worker_files = [worker_compose_file(Path(d).resolve()) for d in model_dirs]
         missing = [str(f) for f in self.worker_files if not f.is_file()]
         if missing:
@@ -90,7 +89,6 @@ class PlatformCompose:
             "WORKER_IMG": self.worker_image,
             "API_VER": self.api_ver,
             "OASIS_DEBUG": "1" if self.debug else "0",
-            "DISABLE_WORKER_WS": "false" if self.channel_layer else "true",
             "OASIS_MODELS_ROOT": str(REPO_ROOT.resolve()),
             "WORKER_CONCURRENCY": WORKER_CONCURRENCY,
             "MONITOR_CONCURRENCY": MONITOR_CONCURRENCY,
@@ -111,8 +109,6 @@ class PlatformCompose:
             profiles.append(storage_profile)
         if storage_env:
             env_files.append(storage_env)
-        if self.channel_layer:
-            profiles.append("channel-layer")
 
         self.compose = DockerCompose(
             context=COMPOSE_DIR,
