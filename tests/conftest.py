@@ -1,22 +1,36 @@
 import difflib
 import filecmp
 import shutil
+import warnings
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
 _NUMERIC_REL_TOL = 1e-4
+# Losses are written to 2 decimal places, so a loss on a half-cent boundary can round either
+# way when the float summation order changes (e.g. between CPU types on CI runners). A value
+# is within tolerance if it is within the relative tolerance OR within one cent. The epsilon
+# absorbs the float error of subtracting two 2dp values (22.88 - 22.87 > 0.01 in float64).
+_NUMERIC_ABS_TOL = 0.01 + 1e-9
+
+
+class ResultsWithinToleranceWarning(UserWarning):
+    """Output differs from expected_results byte-wise, but every value is within tolerance."""
 
 
 _TABULAR_SUFFIXES = {".csv", ".parquet"}
 
 
-def _tabular_diff(actual: Path, expected: Path) -> list[str] | None:
+def _tabular_diff(actual: Path, expected: Path, inexact: list[str] | None = None) -> list[str] | None:
     """Compare two tabular files (CSV or parquet) with numeric tolerance via pandas.
 
     Returns a list of diff strings, or None to fall back to text diff.
     Empty list means equivalent within tolerance.
+
+    If `inexact` is given, a description of each numeric column whose values differ but are within
+    tolerance is appended to it.
     """
     try:
         reader = pd.read_parquet if actual.suffix == ".parquet" else pd.read_csv
@@ -38,7 +52,12 @@ def _tabular_diff(actual: Path, expected: Path) -> list[str] | None:
     for col in df_e.columns:
         both_na = df_a[col].isna() & df_e[col].isna()
         if pd.api.types.is_numeric_dtype(df_e[col]):
-            mask = ~((df_a[col] - df_e[col]).abs() <= _NUMERIC_REL_TOL * df_e[col].abs().clip(lower=1))
+            abs_diff = (df_a[col] - df_e[col]).abs()
+            tol = np.maximum(_NUMERIC_REL_TOL * df_e[col].abs().clip(lower=1), _NUMERIC_ABS_TOL)
+            mask = ~(abs_diff <= tol)
+            n_inexact = int(((abs_diff > 0) & ~mask & ~both_na).sum())
+            if inexact is not None and n_inexact:
+                inexact.append(f"{col}: {n_inexact} value(s) differ, max abs diff {abs_diff[~mask].max():.6g}")
         else:
             mask = df_a[col] != df_e[col]
         mask = mask & ~both_na
@@ -82,9 +101,16 @@ def update_results(request):
 # Helpers used by tests
 # ---------------------------------------------------------------------------
 
-def _diff_dirs(actual: Path, expected: Path) -> list[str]:
-    """Return a list of human-readable difference strings between two directories."""
+def _diff_dirs(actual: Path, expected: Path) -> tuple[list[str], list[str]]:
+    """Compare two directories.
+
+    Returns:
+        tuple: ``(diffs, within_tolerance)``. ``diffs`` holds human-readable difference strings,
+        empty if the directories match within tolerance. ``within_tolerance`` describes the files
+        that are not byte-identical but whose values are all within tolerance.
+    """
     diffs = []
+    within_tolerance = []
 
     def _walk(a: Path, e: Path, rel: str = "") -> None:
         cmp = filecmp.dircmp(a, e)
@@ -95,14 +121,18 @@ def _diff_dirs(actual: Path, expected: Path) -> list[str]:
             diffs.append(f"  missing in output: {prefix}{name}")
         for name in cmp.diff_files:
             if Path(name).suffix in _TABULAR_SUFFIXES:
-                tab_diffs = _tabular_diff(a / name, e / name)
+                inexact = []
+                tab_diffs = _tabular_diff(a / name, e / name, inexact)
                 if tab_diffs is None:
                     pass  # fall through to text diff below
                 elif tab_diffs:
                     diffs.append(f"  content differs:   {prefix}{name}")
                     diffs.extend(tab_diffs)
                 else:
-                    continue  # within numeric tolerance — not a real diff
+                    # within numeric tolerance — not a failure, but reported as a warning
+                    detail = "; ".join(inexact) or "values equal, formatting differs"
+                    within_tolerance.append(f"  {prefix}{name} ({detail})")
+                    continue
                 if tab_diffs is not None:
                     continue
             diffs.append(f"  content differs:   {prefix}{name}")
@@ -122,7 +152,7 @@ def _diff_dirs(actual: Path, expected: Path) -> list[str]:
             _walk(a / sub, e / sub, f"{prefix}{sub}")
 
     _walk(actual, expected)
-    return diffs
+    return diffs, within_tolerance
 
 
 def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool) -> None:
@@ -145,7 +175,13 @@ def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool
                 f"--check-results: no expected_results/output dir found at {expected}\n"
                 "Run with --update-results first to create it."
             )
-        diffs = _diff_dirs(run_dir / "output", expected)
+        diffs, within_tolerance = _diff_dirs(run_dir / "output", expected)
+        if within_tolerance:
+            warnings.warn(
+                f"output is not byte-identical to {expected}, but is within tolerance "
+                f"(rel {_NUMERIC_REL_TOL:g} or abs {_NUMERIC_ABS_TOL:.2f}):\n" + "\n".join(within_tolerance),
+                ResultsWithinToleranceWarning,
+            )
         if diffs:
             pytest.fail(
                 f"--check-results: output differs from {expected}\n"
