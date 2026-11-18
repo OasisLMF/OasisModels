@@ -10,7 +10,7 @@
 #   docker compose down -v
 #
 # Images: SERVER_IMG / WORKER_IMG (default coreoasis/api_server:latest, coreoasis/model_worker:latest)
-# The API is published on a random host port: `docker compose port server 8000`
+# API: http://localhost:8000 (SERVER_PORT in .env; set SERVER_PORT=0 for a random port)
 
 include:
   - path:

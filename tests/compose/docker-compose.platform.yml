@@ -19,6 +19,7 @@
 #   OASIS_DEBUG=0
 #   DISABLE_WORKER_WS=true
 #   OASIS_MODELS_ROOT=../..       (repo root, relative to this directory)
+#   SERVER_PORT=0                 (API host port, 0 = random)
 #
 # Not included compared to a full platform: websocket (asgi), celery-beat.
 #
@@ -114,7 +115,7 @@ services:
       OASIS_ADMIN_USER: admin
       OASIS_ADMIN_PASS: password
     ports:
-      - "8000"          # random host port, looked up by the test fixture
+      - "${SERVER_PORT:-0}:8000"   # 0 = random host port (test fixture looks it up); PiWind/.env sets 8000
     volumes:
       - shared-fs:/shared-fs:rw
     depends_on: *server-depends
