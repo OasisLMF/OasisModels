@@ -3,11 +3,17 @@ Start the OasisPlatform stack with testcontainers' ``DockerCompose``.
 
 Compose files::
 
-    tests/compose/docker-compose.platform.yml   the platform stack + `worker` template (always first)
-    <Model>/docker/worker-container.yml         one per selected model, extends the `worker` template
+    tests/compose/docker-compose.platform.yml     the platform stack + `worker` template (always first)
+    tests/compose/docker-compose.test-limits.yml  gunicorn worker count on the server (tests only)
+    <Model>/docker/worker-container.yml           one per selected model, extends the `worker` template
 
 Only an env file is generated here: images, API variant, debug flag, the
-models root and a unique compose project name.
+models root, process limits and a unique compose project name.
+
+Process limits: without them every celery worker and gunicorn starts one process
+per CPU, which with all models selected (13 workers on a 16 CPU machine) ran the
+host out of memory.  They only apply to stacks started from here; a
+`docker compose up` in a model folder keeps the images' defaults.
 """
 
 import logging
@@ -20,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 COMPOSE_DIR = Path(__file__).parent / "compose"
 COMPOSE_FILE = COMPOSE_DIR / "docker-compose.platform.yml"
+TEST_LIMITS_FILE = COMPOSE_DIR / "docker-compose.test-limits.yml"
+# processes per container (celery children / gunicorn workers, plus one parent process each)
+WORKER_CONCURRENCY = 4      # model workers: matches the 4 lookup / analysis chunks
+MONITOR_CONCURRENCY = 1     # v1/v2 worker monitor
+SERVER_WORKERS = 2          # gunicorn on the API server
 REPO_ROOT = Path(__file__).parent.parent
 API_VERSIONS = ("v1", "v2")
 # database profile -> extra env file with its connection settings (postgres uses the compose defaults)
@@ -76,6 +87,9 @@ class PlatformCompose:
             "OASIS_DEBUG": "1" if self.debug else "0",
             "DISABLE_WORKER_WS": "false" if self.channel_layer else "true",
             "OASIS_MODELS_ROOT": str(REPO_ROOT.resolve()),
+            "WORKER_CONCURRENCY": WORKER_CONCURRENCY,
+            "MONITOR_CONCURRENCY": MONITOR_CONCURRENCY,
+            "SERVER_WORKERS": SERVER_WORKERS,
         }
         path = self.work_dir / "platform.env"
         path.write_text("".join(f"{k}={v}\n" for k, v in env.items()))
@@ -96,7 +110,7 @@ class PlatformCompose:
 
         self.compose = DockerCompose(
             context=COMPOSE_DIR,
-            compose_file_name=[str(COMPOSE_FILE)] + [str(f) for f in self.worker_files],
+            compose_file_name=[str(COMPOSE_FILE), str(TEST_LIMITS_FILE)] + [str(f) for f in self.worker_files],
             env_file=[str(f) for f in env_files],
             profiles=profiles,
             wait=True,          # `up --wait`: blocks until healthchecks pass

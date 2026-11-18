@@ -1,0 +1,19 @@
+# Process limits for the pytest platform stack (tests/test_platform_runs.py) only.
+#
+# Passed by tests/platform_stack.py as an extra `-f` after docker-compose.platform.yml.
+# The model compose files (<Model>/docker-compose.yml) don't include it, so a
+# `docker compose up` in a model folder keeps the images' defaults.
+#
+# The api_server image's ./wsgi/run-wsgi.py starts one gunicorn worker per CPU and
+# overwrites GUNICORN_CMD_ARGS, so the server command is replaced with the same
+# gunicorn call and a fixed worker count (the image's `startup` entrypoint still runs
+# first: waits for the dbs/broker, migrations, admin user).
+#
+# Celery limits for the model workers and worker monitors are set through
+# WORKER_CONCURRENCY / MONITOR_CONCURRENCY in the fixture's env file instead, as the
+# model workers are defined per model with `extends`.
+
+services:
+  server:
+    command: [gunicorn, src.server.oasisapi.wsgi,
+              --bind=0.0.0.0:8000, "--workers=${SERVER_WORKERS:-2}", --timeout=600, --log-level=info]

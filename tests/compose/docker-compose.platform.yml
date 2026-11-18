@@ -33,6 +33,11 @@
 #   CELERY_DB_ENGINE=db+postgresql+psycopg2  CELERY_DB_SSL_MODE=?sslmode=prefer
 #   storage (shared-fs default, s3.env overrides): STORAGE_TYPE=shared-fs, S3_* unset
 #     (S3_* rather than AWS_* so credentials exported in your shell are never picked up)
+#   process limits (unset = the images' defaults, one celery / gunicorn process per CPU;
+#   only the pytest fixture sets these, see tests/platform_stack.py):
+#   WORKER_CONCURRENCY=           celery processes per model worker
+#   MONITOR_CONCURRENCY=0         celery processes per worker monitor (0 = celery default)
+#   (gunicorn workers on the server are limited by docker-compose.test-limits.yml)
 #
 # Not included compared to a full platform: websocket (asgi), celery-beat.
 #
@@ -230,7 +235,8 @@ services:
   v1-worker-monitor:
     image: ${SERVER_IMG:-coreoasis/api_server:latest}
     profiles: ["v1"]
-    command: [celery, -A, src.server.oasisapi.celery_app_v1, worker, --loglevel=INFO, -Q, celery]
+    command: [celery, -A, src.server.oasisapi.celery_app_v1, worker, --loglevel=INFO, -Q, celery,
+              "--concurrency=${MONITOR_CONCURRENCY:-0}"]
     environment: *server-env
     volumes:
       - shared-fs:/shared-fs:rw
@@ -240,7 +246,8 @@ services:
     image: ${SERVER_IMG:-coreoasis/api_server:latest}
     profiles: ["v2"]
     # also consumes the 'task-controller' queue, replacing a separate v2-task-controller
-    command: [celery, -A, src.server.oasisapi.celery_app_v2, worker, --loglevel=INFO, -Q, "celery-v2,task-controller"]
+    command: [celery, -A, src.server.oasisapi.celery_app_v2, worker, --loglevel=INFO, -Q, "celery-v2,task-controller",
+              "--concurrency=${MONITOR_CONCURRENCY:-0}"]
     environment: *server-env
     volumes:
       - shared-fs:/shared-fs:rw
@@ -262,6 +269,8 @@ services:
       OASIS_MODEL_SUPPLIER_ID: OasisLMF
       OASIS_MODEL_VERSION_ID: ${API_VER:-v2}
       OASIS_RUN_MODE: ${API_VER:-v2}
+      # empty = no --concurrency flag (startup.sh), so celery starts one process per CPU
+      OASIS_CELERY_CONCURRENCY: ${WORKER_CONCURRENCY:-}
     volumes:
       - shared-fs:/shared-fs:rw
     depends_on:
