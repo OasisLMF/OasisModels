@@ -1,5 +1,6 @@
 import difflib
 import filecmp
+import os
 import shutil
 from pathlib import Path
 
@@ -62,6 +63,69 @@ def pytest_addoption(parser):
         help="Write (or replace) expected_results/ under each test dir with current output.",
     )
 
+    # Options for tests/test_platform_runs.py (model runs through the OasisPlatform API)
+    group = parser.getgroup("platform", "OasisPlatform integration tests (test_platform_runs.py)")
+    group.addoption(
+        "--platform-tests", default=None,
+        help="Comma separated test cases to run through the platform: 'Model', 'Model/test_N' or 'all'. "
+             "Default: PiWind/test_1. Setting this also enables collection of test_platform_runs.py.",
+    )
+    group.addoption(
+        "--api-version", default=os.getenv("WORKER_API_VER", "v2"), choices=["v1", "v2"],
+        help="Platform API / worker run mode. Default: v2 (env WORKER_API_VER).",
+    )
+    group.addoption(
+        "--server-image", default=os.getenv("SERVER_IMAGE", "coreoasis/api_server:latest"),
+        help="Server image [name:tag]. Default: coreoasis/api_server:latest (env SERVER_IMAGE).",
+    )
+    group.addoption(
+        "--worker-image", default=os.getenv("WORKER_IMAGE", "coreoasis/model_worker:latest"),
+        help="Model worker image [name:tag]. Default: coreoasis/model_worker:latest (env WORKER_IMAGE).",
+    )
+    group.addoption(
+        "--api-url", default=os.getenv("OASIS_API_URL"),
+        help="Use an already running platform at this URL instead of starting containers. "
+             "Its workers must already be registered as OasisLMF/<Model>/<api-version>.",
+    )
+    group.addoption(
+        "--channel-layer", action="store_true", default=False,
+        help="Also start the redis channel layer (needed for server images older than 2.5.7).",
+    )
+    group.addoption(
+        "--platform-debug", action="store_true", default=False,
+        help="Run the platform containers with OASIS_DEBUG=1.",
+    )
+    group.addoption(
+        "--platform-logs", default="platform-logs",
+        help="Directory for container logs and downloaded results. Default: ./platform-logs",
+    )
+    group.addoption(
+        "--server-timeout", type=int, default=int(os.getenv("SERVER_TIMEOUT", 1800)),
+        help="Max seconds for a single test case (generate + run). Default: 1800.",
+    )
+    group.addoption(
+        "--lookup-chunks", type=int, default=int(os.getenv("WORKER_LOOKUP_CHUNKS", 4)),
+        help="v2 only: fixed number of lookup chunks. Default: 4 (env WORKER_LOOKUP_CHUNKS).",
+    )
+    group.addoption(
+        "--analysis-chunks", type=int, default=int(os.getenv("WORKER_ANALYSIS_CHUNKS", 4)),
+        help="v2 only: fixed number of analysis chunks. Default: 4 (env WORKER_ANALYSIS_CHUNKS).",
+    )
+
+
+def pytest_ignore_collect(collection_path, config):
+    """Only collect test_platform_runs.py (which starts docker containers) when asked for.
+
+    It is collected when the file is passed explicitly on the command line,
+    or when --platform-tests is set; a bare ``pytest`` skips it.
+    """
+    if collection_path.name != "test_platform_runs.py":
+        return None
+    explicit = any("test_platform_runs" in str(arg) for arg in config.args)
+    if explicit or config.getoption("--platform-tests") is not None:
+        return None
+    return True
+
 
 def pytest_configure(config):
     if config.getoption("--check-results", default=False) and config.getoption("--update-results", default=False):
@@ -82,12 +146,15 @@ def update_results(request):
 # Helpers used by tests
 # ---------------------------------------------------------------------------
 
-def _diff_dirs(actual: Path, expected: Path) -> list[str]:
-    """Return a list of human-readable difference strings between two directories."""
+def _diff_dirs(actual: Path, expected: Path, ignore=()) -> list[str]:
+    """Return a list of human-readable difference strings between two directories.
+
+    ``ignore`` is a list of file or directory names to leave out of the comparison.
+    """
     diffs = []
 
     def _walk(a: Path, e: Path, rel: str = "") -> None:
-        cmp = filecmp.dircmp(a, e)
+        cmp = filecmp.dircmp(a, e, ignore=list(filecmp.DEFAULT_IGNORES) + list(ignore))
         prefix = f"{rel}/" if rel else ""
         for name in cmp.left_only:
             diffs.append(f"  extra in output:   {prefix}{name}")
@@ -125,19 +192,33 @@ def _diff_dirs(actual: Path, expected: Path) -> list[str]:
     return diffs
 
 
-def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool) -> None:
+def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool, ignore=()) -> None:
     """
     Called after a successful model run.
 
     - update=True  →  replace <test_dir>/expected_results/ with run_dir contents.
     - check=True   →  assert run_dir matches <test_dir>/expected_results/.
+
+    ``ignore`` lists file or directory names (top level of output/) that are
+    not compared, and on update are neither copied nor removed, so the
+    existing expected versions are kept.
     """
     expected = test_dir / "expected_results" / "output"
 
     if update:
-        if expected.exists():
-            shutil.rmtree(expected)
-        shutil.copytree(run_dir / "output", expected)
+        if not ignore:
+            if expected.exists():
+                shutil.rmtree(expected)
+            shutil.copytree(run_dir / "output", expected)
+        else:
+            expected.mkdir(parents=True, exist_ok=True)
+            for old in expected.iterdir():
+                if old.name not in ignore:
+                    shutil.rmtree(old) if old.is_dir() else old.unlink()
+            for new in (run_dir / "output").iterdir():
+                if new.name not in ignore:
+                    copy = shutil.copytree if new.is_dir() else shutil.copy2
+                    copy(new, expected / new.name)
 
     if check:
         if not expected.exists():
@@ -145,7 +226,7 @@ def apply_results_flags(run_dir: Path, test_dir: Path, check: bool, update: bool
                 f"--check-results: no expected_results/output dir found at {expected}\n"
                 "Run with --update-results first to create it."
             )
-        diffs = _diff_dirs(run_dir / "output", expected)
+        diffs = _diff_dirs(run_dir / "output", expected, ignore=ignore)
         if diffs:
             pytest.fail(
                 f"--check-results: output differs from {expected}\n"
