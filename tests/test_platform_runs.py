@@ -21,7 +21,7 @@ Examples::
 
     # select test cases and images
     pytest tests/test_platform_runs.py --platform-tests PiWind,PiWindBI/test_1 \\
-        --api-version v1 \\
+        --api-version v1 --db mysql --storage s3 \\
         --server-image coreoasis/api_server:2.5.9 --worker-image coreoasis/model_worker:2.5.9
 
     # every model (respecting the skip lists)
@@ -148,6 +148,8 @@ def platform(request, platform_logs):
         worker_image=opt("--worker-image"),
         model_dirs=[REPO_ROOT / name for name in models],
         api_ver=api_ver,
+        db=opt("--db"),
+        storage=opt("--storage"),
         debug=opt("--platform-debug"),
         channel_layer=opt("--channel-layer"),
         work_dir=platform_logs / "config",

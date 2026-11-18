@@ -22,6 +22,16 @@ COMPOSE_DIR = Path(__file__).parent / "compose"
 COMPOSE_FILE = COMPOSE_DIR / "docker-compose.platform.yml"
 REPO_ROOT = Path(__file__).parent.parent
 API_VERSIONS = ("v1", "v2")
+# database profile -> extra env file with its connection settings (postgres uses the compose defaults)
+DATABASES = {
+    "postgres": None,
+    "mysql": COMPOSE_DIR / "mysql.env",
+}
+# storage between server and workers -> (profile, extra env file); shared-fs is the compose default
+STORAGES = {
+    "shared-fs": (None, None),
+    "s3": ("s3", COMPOSE_DIR / "s3.env"),
+}
 
 
 def worker_compose_file(model_dir: Path) -> Path:
@@ -32,10 +42,16 @@ def worker_compose_file(model_dir: Path) -> Path:
 class PlatformCompose:
     """Wraps ``DockerCompose`` for one API variant and a set of model directories."""
 
-    def __init__(self, server_image, worker_image, model_dirs, api_ver="v2", debug=False,
-                 channel_layer=False, work_dir=None):
+    def __init__(self, server_image, worker_image, model_dirs, api_ver="v2", db="postgres",
+                 storage="shared-fs", debug=False, channel_layer=False, work_dir=None):
         if api_ver not in API_VERSIONS:
             raise ValueError(f"api_ver must be one of {API_VERSIONS}, got '{api_ver}'")
+        if db not in DATABASES:
+            raise ValueError(f"db must be one of {list(DATABASES)}, got '{db}'")
+        self.db = db
+        if storage not in STORAGES:
+            raise ValueError(f"storage must be one of {list(STORAGES)}, got '{storage}'")
+        self.storage = storage
         self.server_image = server_image
         self.worker_image = worker_image
         self.api_ver = api_ver
@@ -66,13 +82,22 @@ class PlatformCompose:
         return path
 
     def start(self):
-        env_file = self._write_env_file()
-        profiles = [self.api_ver] + (["channel-layer"] if self.channel_layer else [])
+        env_files = [self._write_env_file()]
+        profiles = [self.api_ver, self.db]
+        if DATABASES[self.db]:
+            env_files.append(DATABASES[self.db])
+        storage_profile, storage_env = STORAGES[self.storage]
+        if storage_profile:
+            profiles.append(storage_profile)
+        if storage_env:
+            env_files.append(storage_env)
+        if self.channel_layer:
+            profiles.append("channel-layer")
 
         self.compose = DockerCompose(
             context=COMPOSE_DIR,
             compose_file_name=[str(COMPOSE_FILE)] + [str(f) for f in self.worker_files],
-            env_file=[str(env_file)],
+            env_file=[str(f) for f in env_files],
             profiles=profiles,
             wait=True,          # `up --wait`: blocks until healthchecks pass
         )

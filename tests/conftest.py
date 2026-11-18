@@ -75,6 +75,15 @@ def pytest_addoption(parser):
         help="Platform API / worker run mode. Default: v2 (env WORKER_API_VER).",
     )
     group.addoption(
+        "--db", default=os.getenv("PLATFORM_DB", "postgres"), choices=["postgres", "mysql"],
+        help="Database backend for the platform stack. Default: postgres (env PLATFORM_DB).",
+    )
+    group.addoption(
+        "--storage", default=os.getenv("PLATFORM_STORAGE", "shared-fs"), choices=["shared-fs", "s3"],
+        help="File storage between server and workers: a shared docker volume, or S3 emulated "
+             "with moto. Default: shared-fs (env PLATFORM_STORAGE).",
+    )
+    group.addoption(
         "--server-image", default=os.getenv("SERVER_IMAGE", "coreoasis/api_server:latest"),
         help="Server image [name:tag]. Default: coreoasis/api_server:latest (env SERVER_IMAGE).",
     )

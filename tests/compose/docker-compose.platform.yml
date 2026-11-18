@@ -1,11 +1,19 @@
 # Minimal OasisPlatform stack used by tests/test_platform_runs.py
 #
-# Started by testcontainers' DockerCompose with exactly one API variant profile:
+# Started by testcontainers' DockerCompose with one API profile and one database profile:
 #
-#   --profile v2   server + v2-worker-monitor (also serves the 'task-controller' queue)
-#   --profile v1   server + v1-worker-monitor
-#   --profile channel-layer   optional redis, only needed for server images < 2.5.7
-#                             (also set DISABLE_WORKER_WS=false)
+#   API (pick one)
+#     --profile v2   server + v2-worker-monitor (also serves the 'task-controller' queue)
+#     --profile v1   server + v1-worker-monitor
+#   Database (pick one)
+#     --profile postgres   server-db / celery-db on postgres (default)
+#     --profile mysql      server-db / celery-db on mysql, also pass --env-file mysql.env
+#   Storage between server and workers
+#     (none)               shared docker volume /shared-fs (default)
+#     --profile s3         S3 emulated with moto, also pass --env-file s3.env
+#   Optional
+#     --profile channel-layer   redis, only needed for server images < 2.5.7
+#                               (also set DISABLE_WORKER_WS=false)
 #
 # Model workers are not started from this file directly.  Each model that supports
 # platform tests has a `<Model>/docker/worker-container.yml`, which 'extends' the
@@ -20,12 +28,17 @@
 #   DISABLE_WORKER_WS=true
 #   OASIS_MODELS_ROOT=../..       (repo root, relative to this directory)
 #   SERVER_PORT=0                 (API host port, 0 = random)
+#   database connection (postgres defaults, mysql.env overrides them):
+#   DB_PORT=5432  SERVER_DB_ENGINE=django.db.backends.postgresql_psycopg2
+#   CELERY_DB_ENGINE=db+postgresql+psycopg2  CELERY_DB_SSL_MODE=?sslmode=prefer
+#   storage (shared-fs default, s3.env overrides): STORAGE_TYPE=shared-fs, S3_* unset
+#     (S3_* rather than AWS_* so credentials exported in your shell are never picked up)
 #
 # Not included compared to a full platform: websocket (asgi), celery-beat.
 #
 # Can also be run by hand, e.g.
 #   docker compose -f tests/compose/docker-compose.platform.yml \
-#                  -f PiWind/docker/worker-container.yml --profile v2 up -d --wait
+#                  -f PiWind/docker/worker-container.yml --profile v2 --profile postgres up -d --wait
 
 x-db-env: &db-env
   OASIS_DEBUG: ${OASIS_DEBUG:-0}
@@ -34,31 +47,53 @@ x-db-env: &db-env
   OASIS_SERVER_DB_PASS: oasis
   OASIS_SERVER_DB_USER: oasis
   OASIS_SERVER_DB_NAME: oasis
-  OASIS_SERVER_DB_PORT: 5432
-  OASIS_SERVER_DB_ENGINE: django.db.backends.postgresql_psycopg2
-  OASIS_CELERY_DB_ENGINE: db+postgresql+psycopg2
+  OASIS_SERVER_DB_PORT: ${DB_PORT:-5432}
+  OASIS_SERVER_DB_ENGINE: ${SERVER_DB_ENGINE:-django.db.backends.postgresql_psycopg2}
+  OASIS_CELERY_DB_ENGINE: ${CELERY_DB_ENGINE:-db+postgresql+psycopg2}
+  # no ':' so an empty value (mysql) is kept rather than replaced by the postgres default
+  OASIS_CELERY_DB_SSL_MODE: ${CELERY_DB_SSL_MODE-?sslmode=prefer}
   OASIS_CELERY_DB_HOST: celery-db
   OASIS_CELERY_DB_PASS: password
   OASIS_CELERY_DB_USER: celery
   OASIS_CELERY_DB_NAME: celery
-  OASIS_CELERY_DB_PORT: 5432
+  OASIS_CELERY_DB_PORT: ${DB_PORT:-5432}
   OASIS_TASK_CONTROLLER_QUEUE: task-controller
   OASIS_INPUT_GENERATION_CONTROLLER_QUEUE: task-controller    # names before 2.3.1
   OASIS_LOSSES_GENERATION_CONTROLLER_QUEUE: task-controller
+  # storage shared between server and workers (AWS_* settings are only read when STORAGE_TYPE=S3)
+  OASIS_STORAGE_TYPE: ${STORAGE_TYPE:-shared-fs}
+  OASIS_AWS_BUCKET_NAME: ${S3_BUCKET:-}
+  OASIS_AWS_S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+  OASIS_AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+  OASIS_AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+  OASIS_AWS_S3_REGION_NAME: ${S3_REGION:-us-east-1}
 
 x-server-env: &server-env
   <<: *db-env
   OASIS_URL_SUB_PATH: 0
+  OASIS_AWS_LOCATION: oasis/server
   OASIS_SERVER_CHANNEL_LAYER_HOST: channel-layer
   OASIS_DISABLE_WORKER_WS: ${DISABLE_WORKER_WS:-true}
 
+# Only one database profile is active; `required: false` skips the other backend's services
 x-server-depends: &server-depends
-  server-db:
+  server-db-postgres:
     condition: service_healthy
-  celery-db:
+    required: false
+  celery-db-postgres:
     condition: service_healthy
+    required: false
+  server-db-mysql:
+    condition: service_healthy
+    required: false
+  celery-db-mysql:
+    condition: service_healthy
+    required: false
   broker:
     condition: service_healthy
+  s3-create-bucket:
+    condition: service_completed_successfully
+    required: false
 
 volumes:
   shared-fs:
@@ -67,8 +102,14 @@ services:
   # --------------------------------------------------------------------- #
   # infrastructure
   # --------------------------------------------------------------------- #
-  server-db:
+  # Databases: services are named per backend, and reached as `server-db` / `celery-db`
+  # through network aliases, so the platform config doesn't change between backends.
+  server-db-postgres:
     image: postgres:16
+    profiles: ["postgres"]
+    networks:
+      default:
+        aliases: [server-db]
     environment:
       POSTGRES_DB: oasis
       POSTGRES_USER: oasis
@@ -78,8 +119,12 @@ services:
       interval: 2s
       retries: 60
 
-  celery-db:
+  celery-db-postgres:
     image: postgres:16
+    profiles: ["postgres"]
+    networks:
+      default:
+        aliases: [celery-db]
     environment:
       POSTGRES_DB: celery
       POSTGRES_USER: celery
@@ -88,6 +133,39 @@ services:
       test: ["CMD", "pg_isready", "-U", "celery", "-d", "celery"]
       interval: 2s
       retries: 60
+
+  server-db-mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    networks:
+      default:
+        aliases: [server-db]
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: oasis
+      MYSQL_USER: oasis
+      MYSQL_PASSWORD: oasis
+    healthcheck:
+      # TCP ping: the temporary server mysql runs during init has networking disabled
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "oasis", "-poasis", "--silent"]
+      interval: 2s
+      retries: 90
+
+  celery-db-mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    networks:
+      default:
+        aliases: [celery-db]
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: celery
+      MYSQL_USER: celery
+      MYSQL_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "celery", "-ppassword", "--silent"]
+      interval: 2s
+      retries: 90
 
   broker:
     image: rabbitmq:3.13-management
@@ -98,6 +176,30 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       retries: 60
+
+  # S3 emulation (moto, in memory) for STORAGE_TYPE=S3
+  s3:
+    image: motoserver/moto:5.2.5
+    profiles: ["s3"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/moto-api/', timeout=5)"]
+      interval: 2s
+      retries: 60
+
+  s3-create-bucket:
+    image: motoserver/moto:5.2.5
+    profiles: ["s3"]
+    entrypoint: ["python3", "-c"]
+    command:
+      - |
+        import boto3
+        s3 = boto3.client("s3", endpoint_url="${S3_ENDPOINT_URL:-http://s3:5000}", region_name="${S3_REGION:-us-east-1}",
+                          aws_access_key_id="${S3_ACCESS_KEY_ID:-testing}", aws_secret_access_key="${S3_SECRET_ACCESS_KEY:-testing}")
+        s3.create_bucket(Bucket="${S3_BUCKET:-oasis-bucket}")
+        print("created bucket", "${S3_BUCKET:-oasis-bucket}")
+    depends_on:
+      s3:
+        condition: service_healthy
 
   channel-layer:
     image: redis:7
@@ -156,6 +258,7 @@ services:
     profiles: ["worker-template"]
     environment:
       <<: *db-env
+      OASIS_AWS_LOCATION: oasis/worker
       OASIS_MODEL_SUPPLIER_ID: OasisLMF
       OASIS_MODEL_VERSION_ID: ${API_VER:-v2}
       OASIS_RUN_MODE: ${API_VER:-v2}
