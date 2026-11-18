@@ -16,4 +16,5 @@
 services:
   server:
     command: [gunicorn, src.server.oasisapi.wsgi,
-              --bind=0.0.0.0:8000, "--workers=${SERVER_WORKERS:-2}", --timeout=600, --log-level=info]
+              --bind=0.0.0.0:8000, "--workers=${SERVER_WORKERS:-2}", --timeout=600, --log-level=info,
+              --access-logfile=-]   # log requests (e.g. workers' POST /analysis-status/) to the container log

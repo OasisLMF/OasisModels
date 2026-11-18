@@ -1,0 +1,194 @@
+# Runs model test cases through the OasisPlatform API (tests/test_platform_runs.py).
+#
+# Starts a minimal platform stack (tests/compose/docker-compose.platform.yml) with the given
+# server / worker images plus one model worker per selected model (<Model>/docker/worker-container.yml),
+# then runs each case's portfolio through input generation + losses and compares the outputs with
+# <Model>/tests/test_N/expected_results/output.
+#
+# Also intended to be called from other repos (e.g. OasisPlatform) to check newly built images:
+#
+#   platform_models_v2:
+#     uses: OasisLMF/OasisModels/.github/workflows/platform-tests.yml@main
+#     secrets: inherit
+#     with:
+#       server_image: ${{ needs.setup.outputs.build_server_img }}
+#       server_tag: ${{ needs.setup.outputs.build_server_tag }}
+#       worker_image: ${{ needs.setup.outputs.build_worker_img }}
+#       worker_tag: ${{ needs.setup.outputs.build_worker_tag }}
+#       worker_api_ver: 'v2'
+#       platform_tests: 'all'
+#       storage_suffix: '-models-v2'
+#
+# The image inputs match OasisPiWind's integration.yml, so callers can switch over by changing `uses:`.
+# Images must be pullable from the runner (e.g. pushed to Docker Hub by the caller's build job).
+
+name: Platform Tests
+
+on:
+  # PRs: quick base case only (PiWind/test_1, v2, postgres, shared-fs, latest images)
+  pull_request:
+    branches: [develop, main]
+
+  workflow_dispatch:
+    inputs:
+      server_image:
+        description: 'Server image [coreoasis/api_server]'
+        required: false
+        default: 'coreoasis/api_server'
+      server_tag:
+        description: 'Server tag [semver]'
+        required: false
+        default: 'latest'
+      worker_image:
+        description: 'Worker image [coreoasis/model_worker]'
+        required: false
+        default: 'coreoasis/model_worker'
+      worker_tag:
+        description: 'Worker tag [semver]'
+        required: false
+        default: 'latest'
+      worker_api_ver:
+        description: 'API / worker run mode [v1, v2]'
+        required: false
+        default: 'v2'
+      platform_tests:
+        description: 'Test cases: all, or comma separated Model / Model/test_N [PiWind/test_1]'
+        required: false
+        default: 'all'
+      db:
+        description: 'Platform database [postgres, mysql]'
+        required: false
+        default: 'postgres'
+      storage:
+        description: 'Storage between server and workers [shared-fs, s3]'
+        required: false
+        default: 'shared-fs'
+      debug_mode:
+        description: 'Enable verbose logging for containers [0, 1]'
+        required: false
+        default: '0'
+      oasislmf_branch:
+        description: 'If set, pip install this oasislmf branch for the test client [git ref]'
+        required: false
+      pytest_opts:
+        description: 'Extra pytest options [-k <test_name>]'
+        required: false
+
+  workflow_call:
+    inputs:
+      models_branch:
+        description: 'OasisModels branch to test with (default: repository default branch) [git ref]'
+        required: false
+        type: string
+      server_image:
+        description: 'Server image [coreoasis/api_server]'
+        required: false
+        type: string
+      server_tag:
+        description: 'Server tag [semver]'
+        required: false
+        type: string
+      worker_image:
+        description: 'Worker image [coreoasis/model_worker]'
+        required: false
+        type: string
+      worker_tag:
+        description: 'Worker tag [semver]'
+        required: false
+        type: string
+      worker_api_ver:
+        description: 'API / worker run mode [v1, v2]'
+        required: false
+        type: string
+      platform_tests:
+        description: 'Test cases: all, or comma separated Model / Model/test_N (default: all)'
+        required: false
+        type: string
+      db:
+        description: 'Platform database [postgres, mysql]'
+        required: false
+        type: string
+      storage:
+        description: 'Storage between server and workers [shared-fs, s3]'
+        required: false
+        type: string
+      debug_mode:
+        description: 'Enable verbose logging for containers [0, 1]'
+        required: false
+        type: string
+      oasislmf_branch:
+        description: 'If set, pip install this oasislmf branch for the test client [git ref]'
+        required: false
+        type: string
+      pytest_opts:
+        description: 'Extra pytest options'
+        required: false
+        type: string
+      storage_suffix:
+        description: 'Suffix for the uploaded artifact names (to keep parallel calls apart)'
+        required: false
+        type: string
+
+jobs:
+  platform-tests:
+    runs-on: ubuntu-latest
+    name: Platform tests (${{ inputs.worker_api_ver || 'v2' }}, ${{ inputs.db || 'postgres' }}, ${{ inputs.storage || 'shared-fs' }})
+    env:
+      SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
+      WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
+      API_VER: ${{ inputs.worker_api_ver || 'v2' }}
+      # pull_request has no inputs: run the base case only; dispatch / call default to all
+      PLATFORM_TESTS: ${{ inputs.platform_tests || (github.event_name == 'pull_request' && 'PiWind/test_1') || 'all' }}
+      PLATFORM_DB: ${{ inputs.db || 'postgres' }}
+      PLATFORM_STORAGE: ${{ inputs.storage || 'shared-fs' }}
+      DEBUG_FLAG: ${{ inputs.debug_mode == '1' && '--platform-debug' || '' }}
+
+    steps:
+      # Called from another repo, github.ref belongs to the caller, so always check out OasisModels
+      # explicitly: models_branch if given, the triggering ref when run from this repo, else the default branch
+      - name: Checkout OasisModels
+        uses: actions/checkout@v4
+        with:
+          repository: OasisLMF/OasisModels
+          ref: ${{ inputs.models_branch || (github.repository == 'OasisLMF/OasisModels' && github.ref) || '' }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install oasislmf pytest "testcontainers>=4.14,<5" pandas requests
+
+      - name: Install oasislmf (git branch)
+        if: inputs.oasislmf_branch != ''
+        run: |
+          pip uninstall oasislmf -y
+          pip install "oasislmf @ git+https://github.com/OasisLMF/OasisLMF.git@${{ inputs.oasislmf_branch }}"
+
+      # Fail early with a clear error if an image can't be pulled
+      - name: Pull platform images
+        run: |
+          docker pull "$SERVER_IMAGE"
+          docker pull "$WORKER_IMAGE"
+
+      - name: Run platform tests
+        run: |
+          pytest tests/test_platform_runs.py -v -rs \
+            --platform-tests "$PLATFORM_TESTS" \
+            --server-image "$SERVER_IMAGE" \
+            --worker-image "$WORKER_IMAGE" \
+            --api-version "$API_VER" \
+            --db "$PLATFORM_DB" \
+            --storage "$PLATFORM_STORAGE" \
+            --platform-logs platform-logs \
+            $DEBUG_FLAG ${{ inputs.pytest_opts }}
+
+      # container logs, generated stack config and per-case run outputs / logs (written by the fixture)
+      - name: Store platform logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-logs${{ inputs.storage_suffix }}
+          path: platform-logs
+          retention-days: 3
+          if-no-files-found: ignore

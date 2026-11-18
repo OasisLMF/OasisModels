@@ -6,5 +6,6 @@
     "model_package_dir": "/home/worker/model/src/model_execution_worker",
     "gulpy": false,
     "gulmc": false,
-    "modelpy": false
+    "modelpy": false,
+    "model_custom_gulcalc": "OasisLMF_ComplexModelExample_gulcalc"
 }
