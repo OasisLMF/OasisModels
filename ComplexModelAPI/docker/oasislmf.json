@@ -1,0 +1,7 @@
+{
+    "lookup_data_dir": "/home/worker/model/keys_data",
+    "lookup_module_path": "/home/worker/model/complex_model_wrapper/ComplexAPIKeysLookup.py",
+    "model_data_dir": "/home/worker/model/model_data",
+    "model_version_csv": "/home/worker/model/keys_data/ModelVersion.csv",
+    "model_package_dir": "/home/worker/model/src/model_execution_worker"
+}

@@ -1,0 +1,24 @@
+# ComplexModelAPI model worker for the platform integration tests (tests/test_platform_runs.py)
+#
+# Extends the `worker` template in tests/compose/docker-compose.platform.yml, which must be
+# the first compose file. Relative paths here resolve against that file's directory
+# (tests/compose), so model paths use OASIS_MODELS_ROOT (default: the repo root).
+#
+# Run by hand: see ComplexModelAPI/docker-compose.yml (`cd ComplexModelAPI && docker compose up -d --wait`)
+
+services:
+  worker-complexmodelapi:
+    extends:
+      file: docker-compose.platform.yml
+      service: worker
+    profiles: ["v1", "v2"]
+    environment:
+      OASIS_MODEL_ID: ComplexModelAPI
+      OASIS_MODEL_SETTINGS_FILE: /home/worker/model/meta-data/model_settings.json
+    volumes:
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/complex_model_wrapper:/home/worker/model/complex_model_wrapper:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/keys_data:/home/worker/model/keys_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/meta-data:/home/worker/model/meta-data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/model_data:/home/worker/model/model_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/src:/home/worker/model/src:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/docker/oasislmf.json:/home/worker/model/oasislmf.json:ro

@@ -50,6 +50,13 @@ ADMIN_PASS = "password"
 #   combine                 platform-only directory (occurrence.bin for result combining)
 PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 
+# Skips that only apply to platform runs (on top of model_discovery.SKIP_MODELS), by model or Model/test_N
+PLATFORM_SKIP_REASONS = {
+    "PiWindComplexModel": "needs its complex_model_wrapper package installed in the worker image",
+    "PiWindPostcode/test_4": "exposure pre-analysis settings file lives in the test directory, "
+                             "not available to the worker",
+}
+
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +89,8 @@ def _select_cases(selection):
 
 def _skip_reason(model_name, test_name):
     case_id = _param_id(model_name, test_name)
-    reason = _SKIP_REASONS.get(case_id) or _SKIP_REASONS.get(model_name)
+    reason = (_SKIP_REASONS.get(case_id) or _SKIP_REASONS.get(model_name)
+              or PLATFORM_SKIP_REASONS.get(case_id) or PLATFORM_SKIP_REASONS.get(model_name))
     if reason:
         return reason
     if not worker_compose_file(REPO_ROOT / model_name).is_file():

@@ -90,6 +90,8 @@ celerybeat-schedule
 
 # dotenv
 .env
+# docker compose defaults for the platform test stack (no secrets)
+!/.env
 
 # virtualenv
 .venv
