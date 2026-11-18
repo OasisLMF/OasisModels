@@ -52,7 +52,6 @@ PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 
 # Skips that only apply to platform runs (on top of model_discovery.SKIP_MODELS), by model or Model/test_N
 PLATFORM_SKIP_REASONS = {
-    "PiWindComplexModel": "needs its complex_model_wrapper package installed in the worker image",
     "PiWindPostcode/test_4": "exposure pre-analysis settings file lives in the test directory, "
                              "not available to the worker",
 }

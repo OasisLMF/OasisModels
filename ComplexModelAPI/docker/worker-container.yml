@@ -12,6 +12,15 @@ services:
       file: docker-compose.platform.yml
       service: worker
     profiles: ["v1", "v2"]
+    # custom image: WORKER_IMG + the complex_model_wrapper package (see docker/Dockerfile).
+    # Own image name so the build never retags WORKER_IMG. Rebuild after changing WORKER_IMG
+    # or the wrapper code (`docker compose up --build`; the pytest fixture always builds).
+    image: oasis-models/complexmodelapi-worker:local
+    build:
+      context: ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI
+      dockerfile: docker/Dockerfile
+      args:
+        WORKER_IMG: ${WORKER_IMG:-coreoasis/model_worker:latest}
     environment:
       OASIS_MODEL_ID: ComplexModelAPI
       OASIS_MODEL_SETTINGS_FILE: /home/worker/model/meta-data/model_settings.json

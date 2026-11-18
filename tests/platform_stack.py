@@ -6,6 +6,8 @@ Compose files::
     tests/compose/docker-compose.platform.yml     the platform stack + `worker` template (always first)
     tests/compose/docker-compose.test-limits.yml  gunicorn worker count on the server (tests only)
     <Model>/docker/worker-container.yml           one per selected model, extends the `worker` template
+                                                  (may add a `build:` from <Model>/docker/Dockerfile on top of
+                                                  the worker image, e.g. PiWindComplexModel)
 
 Only an env file is generated here: images, API variant, debug flag, the
 models root, process limits and a unique compose project name.
@@ -114,6 +116,7 @@ class PlatformCompose:
             env_file=[str(f) for f in env_files],
             profiles=profiles,
             wait=True,          # `up --wait`: blocks until healthchecks pass
+            build=True,         # `up --build`: only services with a `build:` section (custom model worker images)
         )
         logger.info("starting compose project %s (profiles=%s, workers=%s)",
                     self.project, profiles, [str(f) for f in self.worker_files])

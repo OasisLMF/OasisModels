@@ -4,6 +4,9 @@
 #   ../tests/compose/docker-compose.platform.yml   server, databases, broker, worker monitor
 #   docker/worker-container.yml                    PiWindComplexModel model worker
 #
+# The worker uses a custom image (docker/Dockerfile: WORKER_IMG + complex_model_wrapper),
+# built on the first `up`. Add --build after changing WORKER_IMG or the wrapper code.
+#
 # From this directory (profiles v2 + postgres are the default, set in .env):
 #   docker compose up -d --wait
 #   API_VER=v1 COMPOSE_PROFILES=v1,postgres docker compose up -d --wait   # v1 API / worker mode
