@@ -33,6 +33,9 @@ TEST_LIMITS_FILE = COMPOSE_DIR / "docker-compose.test-limits.yml"
 WORKER_CONCURRENCY = 4      # model workers: matches the 4 lookup / analysis chunks
 MONITOR_CONCURRENCY = 1     # v1/v2 worker monitor
 SERVER_WORKERS = 2          # gunicorn on the API server
+# Fail fast: a failing worker task isn't retried (platform default: 2 retries, 6s apart).
+# Only takes effect on worker images with OasisPlatform#1521, older ones ignore it.
+WORKER_TASK_MAX_RETRIES = 0
 REPO_ROOT = Path(__file__).parent.parent
 API_VERSIONS = ("v1", "v2")
 # database profile -> extra env file with its connection settings (postgres uses the compose defaults)
@@ -92,6 +95,7 @@ class PlatformCompose:
             "WORKER_CONCURRENCY": WORKER_CONCURRENCY,
             "MONITOR_CONCURRENCY": MONITOR_CONCURRENCY,
             "SERVER_WORKERS": SERVER_WORKERS,
+            "WORKER_TASK_MAX_RETRIES": WORKER_TASK_MAX_RETRIES,
         }
         path = self.work_dir / "platform.env"
         path.write_text("".join(f"{k}={v}\n" for k, v in env.items()))

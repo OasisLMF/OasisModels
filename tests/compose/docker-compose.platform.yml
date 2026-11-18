@@ -38,6 +38,8 @@
 #   WORKER_CONCURRENCY=           celery processes per model worker
 #   MONITOR_CONCURRENCY=0         celery processes per worker monitor (0 = celery default)
 #   (gunicorn workers on the server are limited by docker-compose.test-limits.yml)
+#   WORKER_TASK_MAX_RETRIES=2     worker task retries after an error (fixture: 0, fail fast;
+#                                 only takes effect with OasisPlatform#1521)
 #
 # Not included compared to a full platform: websocket (asgi), celery-beat.
 #
@@ -271,6 +273,9 @@ services:
       OASIS_RUN_MODE: ${API_VER:-v2}
       # empty = no --concurrency flag (startup.sh), so celery starts one process per CPU
       OASIS_CELERY_CONCURRENCY: ${WORKER_CONCURRENCY:-}
+      # automatic retries of a failed task (platform default 2; 0 = fail fast). Never empty:
+      # the worker parses it as an int. Read by workers with OasisPlatform#1521, ignored before.
+      OASIS_WORKER_TASK_MAX_RETRIES: ${WORKER_TASK_MAX_RETRIES:-2}
     volumes:
       - shared-fs:/shared-fs:rw
     depends_on:

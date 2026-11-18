@@ -19,4 +19,6 @@ services:
       - ${OASIS_MODELS_ROOT:-../..}/DynamicFootprint/keys_data:/home/worker/model/keys_data:ro
       - ${OASIS_MODELS_ROOT:-../..}/DynamicFootprint/meta_data:/home/worker/model/meta_data:ro
       - ${OASIS_MODELS_ROOT:-../..}/DynamicFootprint/model_data:/home/worker/model/model_data:ro
+      # model_data/* are relative symlinks to ../../PiWind/model_data, mounted where they resolve in the container
+      - ${OASIS_MODELS_ROOT:-../..}/PiWind/model_data:/home/worker/PiWind/model_data:ro
       - ${OASIS_MODELS_ROOT:-../..}/DynamicFootprint/docker/oasislmf.json:/home/worker/model/oasislmf.json:ro
