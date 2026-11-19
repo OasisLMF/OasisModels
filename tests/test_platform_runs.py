@@ -16,7 +16,7 @@ is set, so a plain ``pytest`` does not start containers.
 
 Examples::
 
-    # base case: PiWind/test_1 on the v2 API
+    # default set (PLATFORM_DEFAULT_TESTS: 5 representative cases) on the v2 API
     pytest tests/test_platform_runs.py
 
     # select test cases and images
@@ -24,8 +24,11 @@ Examples::
         --api-version v1 --db mysql --storage s3 \\
         --server-image coreoasis/api_server:2.5.9 --worker-image coreoasis/model_worker:2.5.9
 
-    # every model (respecting the skip lists)
+    # every test case (respecting the skip lists)
     pytest tests/test_platform_runs.py --platform-tests all
+
+    # the default set plus extra cases
+    pytest tests/test_platform_runs.py --platform-tests default,PiWindVulnerability/test_2
 
     # regenerate expected results from the platform outputs
     pytest tests/test_platform_runs.py --update-results
@@ -40,7 +43,16 @@ from tests.model_discovery import REPO_ROOT, _SKIP_REASONS, _collect_test_config
 from tests.platform_client import run_test_case, wait_for_api, wait_for_model
 from tests.platform_stack import PlatformCompose, worker_compose_file
 
-DEFAULT_PLATFORM_TESTS = "PiWind/test_1"
+# Allow list run by default ('--platform-tests default', or no --platform-tests): a small set where each
+# case covers a different platform path. '--platform-tests all' runs every case.
+PLATFORM_DEFAULT_TESTS = [
+    "PiWind/test_1",                       # base case
+    "PiWindComplexModel/test_1",           # custom worker image, supplier model runner, custom gulcalc
+    "PiWindPostLossAmplification/test_1",  # post loss amplification
+    "DynamicFootprint/test_1",             # gulmc dynamic footprint
+    "PiCyber/test_1",                      # other peril / class of business, accounts-only portfolio
+    "PiWindS3/test_1",                     # (skipped at the moment pending a fix) 
+]
 SUPPLIER_ID = "OasisLMF"
 ADMIN_USER = "admin"          # set in tests/compose/docker-compose.platform.yml
 ADMIN_PASS = "password"
@@ -51,28 +63,17 @@ ADMIN_PASS = "password"
 PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 
 # Skips that only apply to platform runs (on top of model_discovery.SKIP_MODELS), by model or Model/test_N
-_TEST_1_ONLY = "platform runs are limited to test_1 per model"
-
 PLATFORM_SKIP_REASONS = {
     # Failing until upstream fixes are released
     "PiWindS3": "v2 workers drop the model's model_storage_json, so model data isn't read from S3 "
                 "(OasisPlatform fix pending: keep the model's model_storage_json in v2 loss tasks)",
-    "PiWindPostcode/test_1": "no number_of_samples set: chunked v2 runs ignore model_default_samples and run 0 samples "
-                             "(https://github.com/OasisLMF/OasisLMF/issues/2314)",
-
-    "PiWindAbsoluteDamage/test_2": _TEST_1_ONLY,
+    "PiWindPostcode": "no number_of_samples set in its tests: chunked v2 runs ignore model_default_samples and run "
+                      "0 samples (https://github.com/OasisLMF/OasisLMF/issues/2314)",
     "PiWindComplexModel/test_2": "tests implicit model runner discovery (no model_package_dir), which the worker's "
                                  "shared docker/oasislmf.json can't express; expected results also hold no losses",
-    "PiWindPostcode/test_2": _TEST_1_ONLY,
-    "PiWindPostcode/test_3": _TEST_1_ONLY,
     "PiWindPostcode/test_4": "exposure pre-analysis settings file lives in the test directory, "
                              "not available to the worker",
-    "PiWindPostcode/test_5": _TEST_1_ONLY,
-    "PiWindVulnerability/test_2": _TEST_1_ONLY,
-    "PiWindVulnerability/test_3": _TEST_1_ONLY,
-    "UKWind/test_2": _TEST_1_ONLY,
 }
-
 
 
 # ---------------------------------------------------------------------------
@@ -80,12 +81,18 @@ PLATFORM_SKIP_REASONS = {
 # ---------------------------------------------------------------------------
 
 def _select_cases(selection):
-    """Return [(model_name, test_name, config_path)] for a '--platform-tests' value."""
+    """Return [(model_name, test_name, config_path)] for a '--platform-tests' value.
+
+    Tokens: 'all' (every case), 'default' (PLATFORM_DEFAULT_TESTS), 'Model' or 'Model/test_N'.
+    """
     tokens = [t.strip().strip("/") for t in selection.split(",") if t.strip()]
     cases = [(m, t, c) for m, t, c, _env in _collect_test_configs()]
 
     if "all" in tokens:
         return cases
+    if "default" in tokens:
+        i = tokens.index("default")
+        tokens[i:i + 1] = PLATFORM_DEFAULT_TESTS
 
     selected = []
     for token in tokens:
@@ -97,7 +104,7 @@ def _select_cases(selection):
             known = sorted({c[0] for c in cases})
             raise pytest.UsageError(
                 f"--platform-tests: no test cases match '{token}'. "
-                f"Use 'Model', 'Model/test_N' or 'all'. Models: {', '.join(known)}"
+                f"Use 'Model', 'Model/test_N', 'default' or 'all'. Models: {', '.join(known)}"
             )
         selected.extend(m for m in matches if m not in selected)
     return selected
@@ -115,7 +122,7 @@ def _skip_reason(model_name, test_name):
 
 
 def _selected_cases(config):
-    return _select_cases(config.getoption("--platform-tests") or DEFAULT_PLATFORM_TESTS)
+    return _select_cases(config.getoption("--platform-tests") or "default")
 
 
 def pytest_generate_tests(metafunc):

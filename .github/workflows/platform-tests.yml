@@ -25,7 +25,7 @@
 name: Platform Tests
 
 on:
-  # PRs: every enabled case (v2, postgres, shared-fs, latest images)
+  # PRs: the default set (PLATFORM_DEFAULT_TESTS, 5 cases; v2, postgres, shared-fs, latest images)
   pull_request:
     branches: [develop, main]
 
@@ -52,9 +52,9 @@ on:
         required: false
         default: 'v2'
       platform_tests:
-        description: 'Test cases: all, or comma separated Model / Model/test_N [all]'
+        description: 'Test cases: default (5 representative cases), all, or comma separated Model / Model/test_N [default]'
         required: false
-        default: 'all'
+        default: 'default'
       db:
         description: 'Platform database [postgres, mysql]'
         required: false
@@ -101,7 +101,7 @@ on:
         required: false
         type: string
       platform_tests:
-        description: 'Test cases: all, or comma separated Model / Model/test_N (default: all)'
+        description: 'Test cases: default (5 representative cases), all, or comma separated Model / Model/test_N (default: default)'
         required: false
         type: string
       db:
@@ -137,8 +137,8 @@ jobs:
       SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
       WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
       API_VER: ${{ inputs.worker_api_ver || 'v2' }}
-      # every enabled case unless a selection is given (pull_request has no inputs)
-      PLATFORM_TESTS: ${{ inputs.platform_tests || 'all' }}
+      # the default allow list unless a selection is given (pull_request has no inputs)
+      PLATFORM_TESTS: ${{ inputs.platform_tests || 'default' }}
       PLATFORM_DB: ${{ inputs.db || 'postgres' }}
       PLATFORM_STORAGE: ${{ inputs.storage || 'shared-fs' }}
       DEBUG_FLAG: ${{ inputs.debug_mode == '1' && '--platform-debug' || '' }}

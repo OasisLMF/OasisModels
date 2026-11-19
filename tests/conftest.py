@@ -67,8 +67,9 @@ def pytest_addoption(parser):
     group = parser.getgroup("platform", "OasisPlatform integration tests (test_platform_runs.py)")
     group.addoption(
         "--platform-tests", default=None,
-        help="Comma separated test cases to run through the platform: 'Model', 'Model/test_N' or 'all'. "
-             "Default: PiWind/test_1. Setting this also enables collection of test_platform_runs.py.",
+        help="Comma separated test cases to run through the platform: 'Model', 'Model/test_N', "
+             "'default' (allow list PLATFORM_DEFAULT_TESTS in test_platform_runs.py) or 'all'. "
+             "Default: default. Setting this also enables collection of test_platform_runs.py.",
     )
     group.addoption(
         "--api-version", default=os.getenv("WORKER_API_VER", "v2"), choices=["v1", "v2"],
