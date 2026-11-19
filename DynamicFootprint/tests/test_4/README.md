@@ -1,3 +1,3 @@
-# Test 4: reference for the non-blended locations
+# Test 4: blended locations, a section missing
 
-test_1's exposure through the model's original lookup, with the per-location summary of tests 2 and 3. tests/test_dynamic_footprint_blended.py checks that tests 2 and 3 give these ten locations exactly these results.
+As test_3, but the lookup lists only section 2143 for the blended locations. The run raises no error; their placements in section 2144 never see hazard. Compare with test_3.

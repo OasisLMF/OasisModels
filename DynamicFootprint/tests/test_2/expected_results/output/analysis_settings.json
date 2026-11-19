@@ -1,5 +1,5 @@
 {
-    "analysis_tag": "base_example",
+    "analysis_tag": "confluence",
     "source_tag": "MDK",
     "model_name_id": "PiWind",
     "model_supplier_id": "OasisLMF",
@@ -19,18 +19,10 @@
                 "ept_full_uncertainty_aep": true,
                 "ept_full_uncertainty_oep": true,
                 "parquet_format": false
-            }
-        },
-        {
-            "id": 2,
+            },
             "oed_fields": [
                 "LocNumber"
-            ],
-            "ord_output": {
-                "alt_period": true,
-                "elt_sample": true,
-                "parquet_format": false
-            }
+            ]
         }
     ],
     "il_output": false,

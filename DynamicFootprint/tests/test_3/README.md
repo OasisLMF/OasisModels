@@ -1,3 +1,3 @@
-# Test 3: blended locations, a section missing
+# Test 3: blended locations, every section listed
 
-As test_2, but the lookup lists only section 2143 for the blended locations. The run raises no error; their placements in section 2144 never see hazard. Compare with test_2.
+test_1's ten locations plus three located only to a postcode spanning sections 2143 and 2144 (LocNumber 901, 902 protected to 1-in-25, 903 with four buildings and a first floor at 3). The lookup lists both sections for them. See the model README, "Blended areaperils across basins".
