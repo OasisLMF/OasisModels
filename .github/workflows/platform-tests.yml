@@ -183,12 +183,24 @@ jobs:
             --platform-logs platform-logs \
             $DEBUG_FLAG ${{ inputs.pytest_opts }}
 
-      # container logs, generated stack config and per-case run outputs / logs (written by the fixture)
+      # container logs and generated stack config (written by the fixture)
       - name: Store platform logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: platform-logs${{ inputs.storage_suffix }}
-          path: platform-logs
+          path: |
+            platform-logs
+            !platform-logs/runs
+          retention-days: 3
+          if-no-files-found: ignore
+
+      # per-case analysis inputs, outputs and run logs (platform-logs/runs/<api_ver>/<Model>/test_N)
+      - name: Store platform runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-runs${{ inputs.storage_suffix }}
+          path: platform-logs/runs
           retention-days: 3
           if-no-files-found: ignore

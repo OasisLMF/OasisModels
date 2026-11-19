@@ -51,11 +51,20 @@ ADMIN_PASS = "password"
 PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 
 # Skips that only apply to platform runs (on top of model_discovery.SKIP_MODELS), by model or Model/test_N
+_TEST_1_ONLY = "platform runs are limited to test_1 per model"
+
 PLATFORM_SKIP_REASONS = {
+    "PiWindAbsoluteDamage/test_2": _TEST_1_ONLY,
     "PiWindComplexModel/test_2": "tests implicit model runner discovery (no model_package_dir), which the worker's "
                                  "shared docker/oasislmf.json can't express; expected results also hold no losses",
+    "PiWindPostcode/test_2": _TEST_1_ONLY,
+    "PiWindPostcode/test_3": _TEST_1_ONLY,
     "PiWindPostcode/test_4": "exposure pre-analysis settings file lives in the test directory, "
                              "not available to the worker",
+    "PiWindPostcode/test_5": _TEST_1_ONLY,
+    "PiWindVulnerability/test_2": _TEST_1_ONLY,
+    "PiWindVulnerability/test_3": _TEST_1_ONLY,
+    "UKWind/test_2": _TEST_1_ONLY,
 }
 
 

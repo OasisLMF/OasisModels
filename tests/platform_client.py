@@ -107,8 +107,9 @@ def run_test_case(client, model_pk, config_path: Path, run_dir: Path, name,
     deadline = time.monotonic() + timeout
 
     upload_args = {arg: str(test_dir / config[key]) for key, arg in PORTFOLIO_FILES.items() if key in config}
-    if "location_fp" not in upload_args:
-        raise PlatformRunError(f"{config_path}: no 'oed_location_csv' set")
+    # A location file isn't required: some models run from accounts only (e.g. PiCyber)
+    if not {"location_fp", "accounts_fp"} & upload_args.keys():
+        raise PlatformRunError(f"{config_path}: neither 'oed_location_csv' nor 'oed_accounts_csv' is set")
     if "analysis_settings_json" not in config:
         raise PlatformRunError(f"{config_path}: no 'analysis_settings_json' set")
 
