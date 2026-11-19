@@ -43,6 +43,10 @@ jobs:
 
       - name: Install ODS_Tools (git branch)
         #if: ${{ inputs.ods_branch }}
+        # setup.py lists ODS_OpenExposureData tags via the GitHub API to download every OED spec;
+        # unauthenticated calls are limited to 60/hour per runner IP, a token raises that to 1,000/hour
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pip uninstall ods-tools -y && pip install "git+https://github.com/OasisLMF/ODS_Tools.git@${{ inputs.ods_branch || 'main' }}"
 
       - name: Install oasis-data-manager (git branch)
