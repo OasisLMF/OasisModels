@@ -25,7 +25,7 @@
 name: Platform Tests
 
 on:
-  # PRs: quick base case only (PiWind/test_1, v2, postgres, shared-fs, latest images)
+  # PRs: every enabled case (v2, postgres, shared-fs, latest images)
   pull_request:
     branches: [develop, main]
 
@@ -52,7 +52,7 @@ on:
         required: false
         default: 'v2'
       platform_tests:
-        description: 'Test cases: all, or comma separated Model / Model/test_N [PiWind/test_1]'
+        description: 'Test cases: all, or comma separated Model / Model/test_N [all]'
         required: false
         default: 'all'
       db:
@@ -137,8 +137,8 @@ jobs:
       SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
       WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
       API_VER: ${{ inputs.worker_api_ver || 'v2' }}
-      # pull_request has no inputs: run the base case only; dispatch / call default to all
-      PLATFORM_TESTS: ${{ inputs.platform_tests || (github.event_name == 'pull_request' && 'PiWind/test_1') || 'all' }}
+      # every enabled case unless a selection is given (pull_request has no inputs)
+      PLATFORM_TESTS: ${{ inputs.platform_tests || 'all' }}
       PLATFORM_DB: ${{ inputs.db || 'postgres' }}
       PLATFORM_STORAGE: ${{ inputs.storage || 'shared-fs' }}
       DEBUG_FLAG: ${{ inputs.debug_mode == '1' && '--platform-debug' || '' }}
