@@ -54,6 +54,12 @@ PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 _TEST_1_ONLY = "platform runs are limited to test_1 per model"
 
 PLATFORM_SKIP_REASONS = {
+    # Failing until upstream fixes are released
+    "PiWindS3": "v2 workers drop the model's model_storage_json, so model data isn't read from S3 "
+                "(OasisPlatform fix pending: keep the model's model_storage_json in v2 loss tasks)",
+    "PiWindPostcode/test_1": "no number_of_samples set: chunked v2 runs ignore model_default_samples and run 0 samples "
+                             "(https://github.com/OasisLMF/OasisLMF/issues/2314)",
+
     "PiWindAbsoluteDamage/test_2": _TEST_1_ONLY,
     "PiWindComplexModel/test_2": "tests implicit model runner discovery (no model_package_dir), which the worker's "
                                  "shared docker/oasislmf.json can't express; expected results also hold no losses",
