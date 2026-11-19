@@ -1,0 +1,153 @@
+{
+    "model": {
+        "supplier_id": "OasisLMF",
+        "model_id": "UKFlood",
+        "model_version": "0.0.1"
+    },
+    "builtin_lookup_type": "new_lookup",
+    "keys_data_path": "./",
+    "step_definition": {
+        "peril": {
+            "type": "rtree",
+            "columns": [
+                "latitude",
+                "longitude"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/areaperil_dict_point.parquet",
+                "file_type": "parquet",
+                "id_columns": [
+                    "area_peril_id"
+                ],
+                "nearest_neighbor_min_distance": 250
+            }
+        },
+        "section": {
+            "type": "rtree",
+            "columns": [
+                "latitude",
+                "longitude"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/section_dict.parquet",
+                "file_type": "parquet",
+                "id_columns": [
+                    "section_id"
+                ],
+                "nearest_neighbor_min_distance": -1
+            }
+        },
+        "split_loc_perils_covered": {
+            "type": "split_loc_perils_covered",
+            "columns": [
+                "locperilscovered"
+            ],
+            "parameters": {
+                "model_perils_covered": [
+                    "OSF"
+                ]
+            }
+        },
+        "create_coverage_type": {
+            "type": "simple_pivot",
+            "parameters": {
+                "pivots": [
+                    {
+                        "new_cols": {
+                            "coverage_type": 1
+                        }
+                    }
+                ]
+            }
+        },
+        "vulnerability": {
+            "type": "merge",
+            "columns": [
+                "peril_id",
+                "coverage_type",
+                "constructioncode"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/vulnerability_dict.csv",
+                "id_columns": [
+                    "vulnerability_id"
+                ]
+            }
+        },
+        "dynamic_model_adjustment": {
+            "type": "dynamic_model_adjustment",
+            "columns": [
+                "customfloodsop",
+                "firstfloorheight"
+            ],
+            "parameters": {
+                "intensity_adjustment_col": "firstfloorheight",
+                "return_period_col": "customfloodsop"
+            }
+        },
+        "blended_areaperil": {
+            "type": "merge",
+            "columns": [
+                "postalcode"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/blended_areaperil_dict.csv",
+                "join_columns": [
+                    "postalcode"
+                ],
+                "id_columns": [
+                    "area_peril_id"
+                ]
+            }
+        },
+        "blended_sections": {
+            "type": "merge",
+            "columns": [
+                "area_peril_id"
+            ],
+            "parameters": {
+                "file_path": "%%KEYS_DATA_PATH%%/blended_section_dict_missing_section.csv",
+                "join_columns": [
+                    "area_peril_id"
+                ],
+                "id_columns": [
+                    "section_id"
+                ]
+            }
+        },
+        "areaperil": {
+            "type": "combine",
+            "parameters": {
+                "id_columns": [
+                    "area_peril_id"
+                ],
+                "strategy": [
+                    "blended_areaperil",
+                    "peril"
+                ],
+                "logical_type": "or"
+            }
+        },
+        "sections": {
+            "type": "combine",
+            "parameters": {
+                "id_columns": [
+                    "section_id"
+                ],
+                "strategy": [
+                    "blended_sections",
+                    "section"
+                ],
+                "logical_type": "or"
+            }
+        }
+    },
+    "strategy": [
+        "split_loc_perils_covered",
+        "areaperil",
+        "sections",
+        "create_coverage_type",
+        "dynamic_model_adjustment",
+        "vulnerability"
+    ]
+}
