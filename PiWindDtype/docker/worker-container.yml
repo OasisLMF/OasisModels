@@ -15,6 +15,10 @@ services:
     environment:
       OASIS_MODEL_ID: PiWindDtype
       OASIS_MODEL_SETTINGS_FILE: /home/worker/model/meta_data/model_settings.json
+      # The model data is built with 64-bit types (same as tests/test_1/env.json)
+      OASIS_INT: i8
+      OASIS_FLOAT: f8
+      OASIS_AREAPERIL_TYPE: u8
     volumes:
       - ${OASIS_MODELS_ROOT:-../..}/PiWindDtype/keys_data:/home/worker/model/keys_data:ro
       - ${OASIS_MODELS_ROOT:-../..}/PiWindDtype/meta_data:/home/worker/model/meta_data:ro
