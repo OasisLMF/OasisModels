@@ -25,6 +25,7 @@ from tests.conftest import apply_results_flags
 from tests.model_discovery import _SKIP_REASONS, _collect_test_configs, _param_id
 
 
+
 def _build_params():
     params = []
     for model_name, test_name, config_path, env_path in _collect_test_configs():
@@ -36,6 +37,7 @@ def _build_params():
             marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
 
         test_config = {
+                "model_name": model_name,
                 "config_path": config_path,
                 "env_path": env_path
                 }
@@ -55,8 +57,11 @@ def _build_params():
 
 
 @pytest.mark.parametrize("test_config", _build_params())
-def test_model_run(test_config, tmp_path, check_results, update_results):
+def test_model_run(test_config, tmp_path, check_results, update_results, request):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
+    if test_config["model_name"] in AZURITE_MODELS:
+        request.getfixturevalue("azurite_service")
+
     run_dir = tmp_path / "run"
     config_path = test_config["config_path"]
     env_path = test_config.get("env_path", None)
