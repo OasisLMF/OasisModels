@@ -22,7 +22,7 @@ import pytest
 
 from tests.conftest import apply_results_flags
 
-from tests.model_discovery import _SKIP_REASONS, _collect_test_configs, _param_id
+from tests.model_discovery import AZURITE_MODELS, _SKIP_REASONS, _collect_test_configs, _param_id
 
 
 

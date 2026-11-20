@@ -29,6 +29,9 @@ SKIP_MODELS = [
 
 _SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}
 
+# Models whose data is served from a local Azurite container (see tests/azurite_setup.py)
+AZURITE_MODELS = {"PiWindAzure"}
+
 
 def _collect_test_configs():
     """
