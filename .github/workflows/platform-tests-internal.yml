@@ -84,7 +84,7 @@ jobs:
           # TODO: testing only, set back to 'main' before OasisModels#65 is merged
           #       (fix/oasis-models-testing has the OasisPlatform fixes these tests found)
           PLATFORM_BRANCH: ${{ inputs.platform_branch || 'fix/oasis-models-testing' }}
-          OASISLMF_REF: ${{ inputs.oasislmf_branch || 'main' }}
+          OASISLMF_REF: ${{ inputs.oasislmf_branch || 'fix/default-samples-distributed' }}
           ODS_REF: ${{ inputs.ods_branch }}
           HAVE_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
           IMAGE_REPO: coreoasis/github-actions

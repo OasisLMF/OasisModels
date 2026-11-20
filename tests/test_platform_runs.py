@@ -66,8 +66,6 @@ PLATFORM_OUTPUT_IGNORE = ("analysis_settings.json", "combine")
 # Skips that only apply to platform runs (on top of model_discovery.SKIP_MODELS), by model or Model/test_N
 PLATFORM_SKIP_REASONS = {
     # Failing until upstream fixes are released
-    "PiWindS3": "v2 workers drop the model's model_storage_json, so model data isn't read from S3 "
-                "(OasisPlatform fix pending: keep the model's model_storage_json in v2 loss tasks)",
     "PiWindPostcode": "no number_of_samples set in its tests: chunked v2 runs ignore model_default_samples and run "
                       "0 samples (https://github.com/OasisLMF/OasisLMF/issues/2314)",
     "PiWindComplexModel/test_2": "tests implicit model runner discovery (no model_package_dir), which the worker's "
