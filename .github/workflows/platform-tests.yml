@@ -7,11 +7,14 @@
 #
 # Images:
 #   - none of server_image / server_tag / worker_image / worker_tag set (PRs, plain dispatch):
-#     the latest published images, with the worker patched to run oasislmf from `oasislmf_branch`
-#     (default: main) and optionally ODS_Tools from `ods_branch`. This keeps platform runs on the
-#     same oasislmf as Model Tests, so expected results that need unreleased oasislmf changes pass.
+#     server and worker images built from the OasisPlatform `platform_branch` with OasisPlatform's
+#     build-images.yml (coreoasis/github-actions:{api_server,model_worker}-<platform sha>, reused when
+#     they already exist for that commit; building pushes them, so it needs the DOCKERHUB_* secrets).
+#     The worker is then patched to run oasislmf from `oasislmf_branch` (default: main) and optionally
+#     ODS_Tools from `ods_branch`. This keeps platform runs on the same oasislmf as Model Tests, so
+#     expected results that need unreleased oasislmf changes pass.
 #   - any of them set (e.g. OasisPlatform checking newly built images): those images are run as they
-#     are, nothing is patched.
+#     are, nothing is built or patched.
 #
 # Also intended to be called from other repos (e.g. OasisPlatform) to check newly built images:
 #
@@ -33,7 +36,7 @@
 name: Platform Tests
 
 on:
-  # PRs: the default set (PLATFORM_DEFAULT_TESTS; v2, postgres, shared-fs, latest images + oasislmf main)
+  # PRs: the default set (PLATFORM_DEFAULT_TESTS; v2, postgres, shared-fs, images built from OasisPlatform + oasislmf main)
   pull_request:
     branches: [develop, main]
 
@@ -72,6 +75,9 @@ on:
         description: 'Enable verbose logging for containers [0, 1]'
         required: false
         default: '0'
+      platform_branch:
+        description: 'OasisPlatform branch to build the images from when no images are set, empty = default below [branch]'
+        required: false
       oasislmf_branch:
         description: 'oasislmf branch for the patched worker and test client, empty = main; with images set, test client only [git ref]'
         required: false
@@ -124,6 +130,10 @@ on:
         description: 'Enable verbose logging for containers [0, 1]'
         required: false
         type: string
+      platform_branch:
+        description: 'OasisPlatform branch to build the images from when no images are set [branch]'
+        required: false
+        type: string
       oasislmf_branch:
         description: 'oasislmf branch for the patched worker and test client (default: main); with images set, test client only [git ref]'
         required: false
@@ -142,14 +152,78 @@ on:
         type: string
 
 jobs:
+  # Pick the images: the given ones, or ones built from an OasisPlatform branch (see top)
+  platform-images:
+    runs-on: ubuntu-latest
+    name: Platform images
+    outputs:
+      server_image: ${{ steps.images.outputs.server_image }}
+      worker_image: ${{ steps.images.outputs.worker_image }}
+      platform_sha: ${{ steps.images.outputs.platform_sha }}
+      build: ${{ steps.images.outputs.build }}
+      patch_worker: ${{ steps.images.outputs.patch_worker }}
+    steps:
+      - name: Select images
+        id: images
+        env:
+          IMAGES_SET: ${{ (inputs.server_image || inputs.server_tag || inputs.worker_image || inputs.worker_tag) && 'true' || 'false' }}
+          SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
+          WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
+          # TODO: testing only, set back to 'main' before OasisModels#65 is merged
+          #       (fix/oasis-models-testing has the OasisPlatform fixes these tests found)
+          PLATFORM_BRANCH: ${{ inputs.platform_branch || 'fix/oasis-models-testing' }}
+          BUILT_REPO: coreoasis/github-actions
+        run: |
+          if [ "$IMAGES_SET" = "true" ]; then
+            # given images are tested as they are: nothing built or patched
+            echo "server_image=$SERVER_IMAGE" >> "$GITHUB_OUTPUT"
+            echo "worker_image=$WORKER_IMAGE" >> "$GITHUB_OUTPUT"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "patch_worker=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PLATFORM_SHA=$(git ls-remote https://github.com/OasisLMF/OasisPlatform.git "refs/heads/$PLATFORM_BRANCH" | cut -f1)
+          if [ -z "$PLATFORM_SHA" ]; then
+            echo "::error::OasisPlatform branch '$PLATFORM_BRANCH' not found"
+            exit 1
+          fi
+          SERVER="$BUILT_REPO:api_server-$PLATFORM_SHA"
+          WORKER="$BUILT_REPO:model_worker-$PLATFORM_SHA"
+          if docker manifest inspect "$SERVER" > /dev/null 2>&1 && docker manifest inspect "$WORKER" > /dev/null 2>&1; then
+            BUILD=false
+          else
+            BUILD=true
+          fi
+          echo "OasisPlatform $PLATFORM_BRANCH @ $PLATFORM_SHA, build images: $BUILD"
+          echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
+          echo "server_image=$SERVER" >> "$GITHUB_OUTPUT"
+          echo "worker_image=$WORKER" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "patch_worker=true" >> "$GITHUB_OUTPUT"
+
+  build-platform:
+    name: Build platform images
+    needs: [platform-images]
+    if: needs.platform-images.outputs.build == 'true'
+    uses: OasisLMF/OasisPlatform/.github/workflows/build-images.yml@main
+    secrets: inherit
+    with:
+      docker_push: 'true'
+      ignore_unfixed: 'true'
+      cve_severity: 'SKIP'
+      # the commit resolved above, so the built image tags match
+      checkout_ref: ${{ needs.platform-images.outputs.platform_sha }}
+
   platform-tests:
     runs-on: ubuntu-latest
     name: Platform tests (${{ inputs.worker_api_ver || 'v2' }}, ${{ inputs.db || 'postgres' }}, ${{ inputs.storage || 'shared-fs' }})
+    needs: [platform-images, build-platform]
+    # build-platform is skipped when the images are given or already built
+    if: ${{ !failure() && !cancelled() }}
     env:
-      SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
-      WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
-      # Patch the worker only when no image inputs are set; given images are tested as they are
-      PATCH_WORKER: ${{ !(inputs.server_image || inputs.server_tag || inputs.worker_image || inputs.worker_tag) }}
+      SERVER_IMAGE: ${{ needs.platform-images.outputs.server_image }}
+      WORKER_IMAGE: ${{ needs.platform-images.outputs.worker_image }}
+      PATCH_WORKER: ${{ needs.platform-images.outputs.patch_worker }}
       OASISLMF_BRANCH: ${{ inputs.oasislmf_branch || 'main' }}
       API_VER: ${{ inputs.worker_api_ver || 'v2' }}
       # the default allow list unless a selection is given (pull_request has no inputs)
