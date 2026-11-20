@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+#
+# Model worker image with oasislmf (and optionally ODS_Tools) installed from a git ref.
+# Used by .github/workflows/platform-tests-internal.yml.
+#
+# The worker image has no git or compiler (and oasislmf has a C extension), so the wheels are built
+# in a stock python image of the worker's Python version, then installed over the image's packages
+# (--user, ~/.local comes first on sys.path).
+#
+#   docker build -f .github/docker/Dockerfile.worker-patch \
+#     --build-arg BASE_IMAGE=coreoasis/model_worker:latest --build-arg PYTHON_VERSION=3.14 \
+#     --build-arg OASISLMF_REF=main [--build-arg ODS_REF=develop] -t model_worker:patched .
+ARG BASE_IMAGE
+ARG PYTHON_VERSION
+
+FROM python:${PYTHON_VERSION}-slim AS wheels
+ARG OASISLMF_REF
+ARG ODS_REF
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+# ODS_Tools' setup.py lists spec release tags through the GitHub API (rate limited without a token)
+RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN \
+    pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/OasisLMF/archive/${OASISLMF_REF}.tar.gz" && \
+    if [ -n "$ODS_REF" ]; then \
+      pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/ODS_Tools/archive/${ODS_REF}.tar.gz"; \
+    fi
+
+FROM ${BASE_IMAGE}
+RUN --mount=type=bind,from=wheels,source=/wheels,target=/tmp/wheels \
+    pip uninstall oasislmf -y && \
+    if ls /tmp/wheels/ods_tools-*.whl >/dev/null 2>&1; then pip uninstall ods-tools -y; fi && \
+    pip install --user --no-cache-dir --no-warn-script-location \
+      "$(ls /tmp/wheels/oasislmf-*.whl)[extra]" $(ls /tmp/wheels/ods_tools-*.whl 2>/dev/null)

@@ -1,0 +1,33 @@
+# ComplexModelAPI model worker for the platform integration tests (tests/test_platform_runs.py)
+#
+# Extends the `worker` template in tests/compose/docker-compose.platform.yml, which must be
+# the first compose file. Relative paths here resolve against that file's directory
+# (tests/compose), so model paths use OASIS_MODELS_ROOT (default: the repo root).
+#
+# Run by hand: see ComplexModelAPI/docker-compose.yml (`cd ComplexModelAPI && docker compose up -d --wait`)
+
+services:
+  worker-complexmodelapi:
+    extends:
+      file: docker-compose.platform.yml
+      service: worker
+    profiles: ["v1", "v2"]
+    # custom image: WORKER_IMG + the complex_model_wrapper package (see docker/Dockerfile).
+    # Own image name so the build never retags WORKER_IMG. Rebuild after changing WORKER_IMG
+    # or the wrapper code (`docker compose up --build`; the pytest fixture always builds).
+    image: oasis-models/complexmodelapi-worker:local
+    build:
+      context: ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI
+      dockerfile: docker/Dockerfile
+      args:
+        WORKER_IMG: ${WORKER_IMG:-coreoasis/model_worker:latest}
+    environment:
+      OASIS_MODEL_ID: ComplexModelAPI
+      OASIS_MODEL_SETTINGS_FILE: /home/worker/model/meta-data/model_settings.json
+    volumes:
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/complex_model_wrapper:/home/worker/model/complex_model_wrapper:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/keys_data:/home/worker/model/keys_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/meta-data:/home/worker/model/meta-data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/model_data:/home/worker/model/model_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/src:/home/worker/model/src:ro
+      - ${OASIS_MODELS_ROOT:-../..}/ComplexModelAPI/docker/oasislmf.json:/home/worker/model/oasislmf.json:ro
