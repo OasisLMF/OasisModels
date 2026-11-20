@@ -1,26 +1,17 @@
-# Runs model test cases through the OasisPlatform API (tests/test_platform_runs.py).
+# Runs model test cases through the OasisPlatform API (tests/test_platform_runs.py) on given images.
 #
 # Starts a minimal platform stack (tests/compose/docker-compose.platform.yml) with the given
 # server / worker images plus one model worker per selected model (<Model>/docker/worker-container.yml),
 # then runs each case's portfolio through input generation + losses and compares the outputs with
 # <Model>/tests/test_N/expected_results/output.
 #
-# Images:
-#   - none of server_image / server_tag / worker_image / worker_tag set (PRs, plain dispatch):
-#     server and worker images built from the OasisPlatform `platform_branch` with OasisPlatform's
-#     build-images.yml (coreoasis/github-actions:{api_server,model_worker}-<platform sha>, reused when
-#     they already exist for that commit; building pushes them, so it needs the DOCKERHUB_* secrets).
-#     The worker is then patched to run oasislmf from `oasislmf_branch` (default: main) and optionally
-#     ODS_Tools from `ods_branch`. This keeps platform runs on the same oasislmf as Model Tests, so
-#     expected results that need unreleased oasislmf changes pass.
-#   - any of them set (e.g. OasisPlatform checking newly built images): those images are run as they
-#     are, nothing is built or patched.
+# This is the reusable runner: it only tests images, it never builds or patches them. PRs in this repo
+# go through platform-tests-internal.yml, which builds the images and then calls this workflow.
 #
-# Also intended to be called from other repos (e.g. OasisPlatform) to check newly built images:
+# Called from other repos (e.g. OasisPlatform) to check newly built images:
 #
 #   platform_models_v2:
 #     uses: OasisLMF/OasisModels/.github/workflows/platform-tests.yml@main
-#     secrets: inherit
 #     with:
 #       server_image: ${{ needs.setup.outputs.build_server_img }}
 #       server_tag: ${{ needs.setup.outputs.build_server_tag }}
@@ -36,25 +27,24 @@
 name: Platform Tests
 
 on:
-  # PRs: the default set (PLATFORM_DEFAULT_TESTS; v2, postgres, shared-fs, images built from OasisPlatform + oasislmf main)
-  pull_request:
-    branches: [develop, main]
-
   workflow_dispatch:
     inputs:
-      # leave all four image inputs empty to run the latest images with the worker patched (see top)
       server_image:
-        description: 'Server image, empty = coreoasis/api_server [coreoasis/api_server]'
+        description: 'Server image [coreoasis/api_server]'
         required: false
+        default: 'coreoasis/api_server'
       server_tag:
-        description: 'Server tag, empty = latest [semver]'
+        description: 'Server tag [semver]'
         required: false
+        default: 'latest'
       worker_image:
-        description: 'Worker image, empty = coreoasis/model_worker patched with oasislmf_branch [coreoasis/model_worker]'
+        description: 'Worker image [coreoasis/model_worker]'
         required: false
+        default: 'coreoasis/model_worker'
       worker_tag:
-        description: 'Worker tag, empty = latest [semver]'
+        description: 'Worker tag [semver]'
         required: false
+        default: 'latest'
       worker_api_ver:
         description: 'API / worker run mode [v1, v2]'
         required: false
@@ -75,14 +65,8 @@ on:
         description: 'Enable verbose logging for containers [0, 1]'
         required: false
         default: '0'
-      platform_branch:
-        description: 'OasisPlatform branch to build the images from when no images are set, empty = default below [branch]'
-        required: false
       oasislmf_branch:
-        description: 'oasislmf branch for the patched worker and test client, empty = main; with images set, test client only [git ref]'
-        required: false
-      ods_branch:
-        description: 'ODS_Tools branch for the patched worker, empty = the version oasislmf installs (ignored when images are set) [git ref]'
+        description: 'oasislmf for the test client, empty = latest release (the worker is not changed) [git ref]'
         required: false
       pytest_opts:
         description: 'Extra pytest options [-k <test_name>]'
@@ -95,19 +79,19 @@ on:
         required: false
         type: string
       server_image:
-        description: 'Server image [coreoasis/api_server]'
+        description: 'Server image (default: coreoasis/api_server) [coreoasis/api_server]'
         required: false
         type: string
       server_tag:
-        description: 'Server tag [semver]'
+        description: 'Server tag (default: latest) [semver]'
         required: false
         type: string
       worker_image:
-        description: 'Worker image [coreoasis/model_worker]'
+        description: 'Worker image (default: coreoasis/model_worker) [coreoasis/model_worker]'
         required: false
         type: string
       worker_tag:
-        description: 'Worker tag [semver]'
+        description: 'Worker tag (default: latest) [semver]'
         required: false
         type: string
       worker_api_ver:
@@ -130,16 +114,8 @@ on:
         description: 'Enable verbose logging for containers [0, 1]'
         required: false
         type: string
-      platform_branch:
-        description: 'OasisPlatform branch to build the images from when no images are set [branch]'
-        required: false
-        type: string
       oasislmf_branch:
-        description: 'oasislmf branch for the patched worker and test client (default: main); with images set, test client only [git ref]'
-        required: false
-        type: string
-      ods_branch:
-        description: 'ODS_Tools branch for the patched worker (ignored when images are set) [git ref]'
+        description: 'oasislmf for the test client (default: latest release); the worker image is not changed [git ref]'
         required: false
         type: string
       pytest_opts:
@@ -152,81 +128,14 @@ on:
         type: string
 
 jobs:
-  # Pick the images: the given ones, or ones built from an OasisPlatform branch (see top)
-  platform-images:
-    runs-on: ubuntu-latest
-    name: Platform images
-    outputs:
-      server_image: ${{ steps.images.outputs.server_image }}
-      worker_image: ${{ steps.images.outputs.worker_image }}
-      platform_sha: ${{ steps.images.outputs.platform_sha }}
-      build: ${{ steps.images.outputs.build }}
-      patch_worker: ${{ steps.images.outputs.patch_worker }}
-    steps:
-      - name: Select images
-        id: images
-        env:
-          IMAGES_SET: ${{ (inputs.server_image || inputs.server_tag || inputs.worker_image || inputs.worker_tag) && 'true' || 'false' }}
-          SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
-          WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
-          # TODO: testing only, set back to 'main' before OasisModels#65 is merged
-          #       (fix/oasis-models-testing has the OasisPlatform fixes these tests found)
-          PLATFORM_BRANCH: ${{ inputs.platform_branch || 'fix/oasis-models-testing' }}
-          BUILT_REPO: coreoasis/github-actions
-        run: |
-          if [ "$IMAGES_SET" = "true" ]; then
-            # given images are tested as they are: nothing built or patched
-            echo "server_image=$SERVER_IMAGE" >> "$GITHUB_OUTPUT"
-            echo "worker_image=$WORKER_IMAGE" >> "$GITHUB_OUTPUT"
-            echo "build=false" >> "$GITHUB_OUTPUT"
-            echo "patch_worker=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          PLATFORM_SHA=$(git ls-remote https://github.com/OasisLMF/OasisPlatform.git "refs/heads/$PLATFORM_BRANCH" | cut -f1)
-          if [ -z "$PLATFORM_SHA" ]; then
-            echo "::error::OasisPlatform branch '$PLATFORM_BRANCH' not found"
-            exit 1
-          fi
-          SERVER="$BUILT_REPO:api_server-$PLATFORM_SHA"
-          WORKER="$BUILT_REPO:model_worker-$PLATFORM_SHA"
-          if docker manifest inspect "$SERVER" > /dev/null 2>&1 && docker manifest inspect "$WORKER" > /dev/null 2>&1; then
-            BUILD=false
-          else
-            BUILD=true
-          fi
-          echo "OasisPlatform $PLATFORM_BRANCH @ $PLATFORM_SHA, build images: $BUILD"
-          echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "server_image=$SERVER" >> "$GITHUB_OUTPUT"
-          echo "worker_image=$WORKER" >> "$GITHUB_OUTPUT"
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "patch_worker=true" >> "$GITHUB_OUTPUT"
-
-  build-platform:
-    name: Build platform images
-    needs: [platform-images]
-    if: needs.platform-images.outputs.build == 'true'
-    uses: OasisLMF/OasisPlatform/.github/workflows/build-images.yml@main
-    secrets: inherit
-    with:
-      docker_push: 'true'
-      ignore_unfixed: 'true'
-      cve_severity: 'SKIP'
-      # the commit resolved above, so the built image tags match
-      checkout_ref: ${{ needs.platform-images.outputs.platform_sha }}
-
   platform-tests:
     runs-on: ubuntu-latest
     name: Platform tests (${{ inputs.worker_api_ver || 'v2' }}, ${{ inputs.db || 'postgres' }}, ${{ inputs.storage || 'shared-fs' }})
-    needs: [platform-images, build-platform]
-    # build-platform is skipped when the images are given or already built
-    if: ${{ !failure() && !cancelled() }}
     env:
-      SERVER_IMAGE: ${{ needs.platform-images.outputs.server_image }}
-      WORKER_IMAGE: ${{ needs.platform-images.outputs.worker_image }}
-      PATCH_WORKER: ${{ needs.platform-images.outputs.patch_worker }}
-      OASISLMF_BRANCH: ${{ inputs.oasislmf_branch || 'main' }}
+      SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
+      WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
+      OASISLMF_BRANCH: ${{ inputs.oasislmf_branch }}
       API_VER: ${{ inputs.worker_api_ver || 'v2' }}
-      # the default allow list unless a selection is given (pull_request has no inputs)
       PLATFORM_TESTS: ${{ inputs.platform_tests || 'default' }}
       PLATFORM_DB: ${{ inputs.db || 'postgres' }}
       PLATFORM_STORAGE: ${{ inputs.storage || 'shared-fs' }}
@@ -248,75 +157,24 @@ jobs:
       - name: Install test dependencies
         run: pip install oasislmf pytest "testcontainers>=4.14,<5" pandas requests
 
-      # Test client: the same oasislmf as the patched worker, or the requested branch with given images
-      - name: Install oasislmf (git branch)
-        if: env.PATCH_WORKER == 'true' || inputs.oasislmf_branch != ''
+      - name: Install oasislmf (${{ inputs.oasislmf_branch }})
+        if: env.OASISLMF_BRANCH != ''
         run: |
           pip uninstall oasislmf -y
           pip install "oasislmf @ git+https://github.com/OasisLMF/OasisLMF.git@${OASISLMF_BRANCH}"
 
-      # Fail early with a clear error if an image can't be pulled (for a patched worker: its base image)
+      # Fail early with a clear error if an image can't be pulled
       - name: Pull platform images
         run: |
           docker pull "$SERVER_IMAGE"
           docker pull "$WORKER_IMAGE"
 
-      # Local image only (not pushed): testcontainers runs on this runner, and custom model worker
-      # images (e.g. PiWindComplexModel's docker/Dockerfile) build FROM it through WORKER_IMG
-      - name: Patch worker image (oasislmf ${{ inputs.oasislmf_branch || 'main' }})
-        id: patch
-        if: env.PATCH_WORKER == 'true'
-        env:
-          ODS_BRANCH: ${{ inputs.ods_branch }}
-          PATCHED_IMAGE: oasis-models/model_worker:patched
-          # ODS_Tools' setup.py lists spec release tags through the GitHub API (rate limited without a token)
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          # The worker image has no git or compiler (and oasislmf has a C extension), so the wheels are
-          # built in a stock python image of the worker's Python version, then installed over the image's
-          # packages (--user, ~/.local comes first on sys.path)
-          cat > Dockerfile.patch << 'DOCKERFILE'
-          # syntax=docker/dockerfile:1
-          ARG BASE_IMAGE
-          ARG PYTHON_VERSION
-
-          FROM python:${PYTHON_VERSION}-slim AS wheels
-          ARG OASISLMF_BRANCH
-          ARG ODS_BRANCH
-          RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
-          RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN \
-              pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/OasisLMF/archive/${OASISLMF_BRANCH}.tar.gz" && \
-              if [ -n "$ODS_BRANCH" ]; then \
-                pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/ODS_Tools/archive/${ODS_BRANCH}.tar.gz"; \
-              fi
-
-          FROM ${BASE_IMAGE}
-          RUN --mount=type=bind,from=wheels,source=/wheels,target=/tmp/wheels \
-              pip uninstall oasislmf -y && \
-              if ls /tmp/wheels/ods_tools-*.whl >/dev/null 2>&1; then pip uninstall ods-tools -y; fi && \
-              pip install --user --no-cache-dir --no-warn-script-location \
-                "$(ls /tmp/wheels/oasislmf-*.whl)[extra]" $(ls /tmp/wheels/ods_tools-*.whl 2>/dev/null)
-          DOCKERFILE
-          PYTHON_VERSION=$(docker run --rm --entrypoint python "$WORKER_IMAGE" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
-          docker build \
-            --build-arg BASE_IMAGE="$WORKER_IMAGE" \
-            --build-arg PYTHON_VERSION="$PYTHON_VERSION" \
-            --build-arg OASISLMF_BRANCH="$OASISLMF_BRANCH" \
-            --build-arg ODS_BRANCH="$ODS_BRANCH" \
-            --secret id=github_token,env=GITHUB_TOKEN \
-            -t "$PATCHED_IMAGE" \
-            -f Dockerfile.patch .
-          docker run --rm --entrypoint pip "$PATCHED_IMAGE" list 2>/dev/null | grep -i -E "^(oasislmf|ods.tools|oasis.data.manager) "
-          echo "image=$PATCHED_IMAGE" >> "$GITHUB_OUTPUT"
-
       - name: Run platform tests
-        env:
-          RUN_WORKER_IMAGE: ${{ steps.patch.outputs.image || env.WORKER_IMAGE }}
         run: |
           pytest tests/test_platform_runs.py -v -rs \
             --platform-tests "$PLATFORM_TESTS" \
             --server-image "$SERVER_IMAGE" \
-            --worker-image "$RUN_WORKER_IMAGE" \
+            --worker-image "$WORKER_IMAGE" \
             --api-version "$API_VER" \
             --db "$PLATFORM_DB" \
             --storage "$PLATFORM_STORAGE" \
