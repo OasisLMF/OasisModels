@@ -16,7 +16,7 @@ is set, so a plain ``pytest`` does not start containers.
 
 Examples::
 
-    # default set (PLATFORM_DEFAULT_TESTS: 5 representative cases) on the v2 API
+    # default set (PLATFORM_DEFAULT_TESTS: a representative subset) on the v2 API
     pytest tests/test_platform_runs.py
 
     # select test cases and images
@@ -51,6 +51,7 @@ PLATFORM_DEFAULT_TESTS = [
     "PiWindPostLossAmplification/test_1",  # post loss amplification
     "DynamicFootprint/test_1",             # gulmc dynamic footprint
     "PiCyber/test_1",                      # other peril / class of business, accounts-only portfolio
+    "PiWindDtype/test_1",                  # 64-bit dtypes (OASIS_INT / OASIS_FLOAT / OASIS_AREAPERIL_TYPE)
     "PiWindS3/test_1",                     # (skipped at the moment pending a fix) 
 ]
 SUPPLIER_ID = "OasisLMF"
