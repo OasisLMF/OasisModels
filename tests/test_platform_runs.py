@@ -9,7 +9,8 @@ skipped.  Each worker self-registers as ``OasisLMF/<Model>/<api-version>``.
 Each test case uploads the portfolio and analysis settings from
 ``<Model>/tests/test_N/oasislmf.json``, runs input generation + losses, and
 compares the outputs against
-``<Model>/tests/test_N/expected_results/output/``.
+``<Model>/tests/test_N/expected_results/output/`` (with ``--skip-results-check``
+a case only has to complete without errors and produce output files).
 
 This file is only collected when passed explicitly or when ``--platform-tests``
 is set, so a plain ``pytest`` does not start containers.
@@ -29,6 +30,9 @@ Examples::
 
     # the default set plus extra cases
     pytest tests/test_platform_runs.py --platform-tests default,PiWindVulnerability/test_2
+
+    # only check that runs complete without errors (e.g. old releases against new images)
+    pytest tests/test_platform_runs.py --skip-results-check
 
     # regenerate expected results from the platform outputs
     pytest tests/test_platform_runs.py --update-results
@@ -230,11 +234,16 @@ def test_platform_run(platform_case, platform, model_pk, platform_logs, request)
         analysis_chunks=opt("--analysis-chunks"),
     )
 
+    # run_test_case raises if input generation or the loss run fail or time out
     assert client.analyses.status(analysis_id) == "RUN_COMPLETED"
 
-    # Platform runs always compare against expected results, unless regenerating them
-    update = opt("--update-results")
-    apply_results_flags(run_dir, platform_case["config_path"].parent, check=not update, update=update,
-                        ignore=PLATFORM_OUTPUT_IGNORE)
+    if opt("--skip-results-check"):
+        output_files = [f for f in (run_dir / "output").rglob("*") if f.is_file()]
+        assert output_files, f"{case_id}: run completed but produced no output files under {run_dir / 'output'}"
+    else:
+        # compare against expected results, unless regenerating them
+        update = opt("--update-results")
+        apply_results_flags(run_dir, platform_case["config_path"].parent, check=not update, update=update,
+                            ignore=PLATFORM_OUTPUT_IGNORE)
 
     client.portfolios.delete(portfolio_id)

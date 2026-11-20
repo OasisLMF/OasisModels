@@ -100,6 +100,12 @@ def pytest_addoption(parser):
              "Its workers must already be registered as OasisLMF/<Model>/<api-version>.",
     )
     group.addoption(
+        "--skip-results-check", action="store_true", default=False,
+        help="Don't compare platform outputs with expected_results/. A case still fails unless "
+             "input generation and the loss run complete without errors and produce output files. "
+             "For compatibility checks across releases, where results can legitimately differ.",
+    )
+    group.addoption(
         "--platform-debug", action="store_true", default=False,
         help="Run the platform containers with OASIS_DEBUG=1.",
     )
@@ -138,6 +144,8 @@ def pytest_ignore_collect(collection_path, config):
 def pytest_configure(config):
     if config.getoption("--check-results", default=False) and config.getoption("--update-results", default=False):
         pytest.exit("--check-results and --update-results are mutually exclusive", returncode=1)
+    if config.getoption("--skip-results-check", default=False) and config.getoption("--update-results", default=False):
+        pytest.exit("--skip-results-check and --update-results are mutually exclusive", returncode=1)
 
 
 @pytest.fixture

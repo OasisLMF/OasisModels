@@ -48,6 +48,12 @@
 x-db-env: &db-env
   OASIS_DEBUG: ${OASIS_DEBUG:-0}
   OASIS_CELERY_BROKER_URL: "amqp://rabbit:rabbit@broker:5672"
+  # 1.x workers ignore the broker URL: they build it from these and wait on host:port at startup.
+  # 2.x reads OASIS_CELERY_BROKER_URL first, so these are only a fallback there.
+  OASIS_RABBIT_HOST: broker
+  OASIS_RABBIT_PORT: 5672
+  OASIS_RABBIT_USER: rabbit
+  OASIS_RABBIT_PASS: rabbit
   OASIS_SERVER_DB_HOST: server-db
   OASIS_SERVER_DB_PASS: oasis
   OASIS_SERVER_DB_USER: oasis

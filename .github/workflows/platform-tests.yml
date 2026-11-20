@@ -3,7 +3,8 @@
 # Starts a minimal platform stack (tests/compose/docker-compose.platform.yml) with the given
 # server / worker images plus one model worker per selected model (<Model>/docker/worker-container.yml),
 # then runs each case's portfolio through input generation + losses and compares the outputs with
-# <Model>/tests/test_N/expected_results/output.
+# <Model>/tests/test_N/expected_results/output. With skip_results_check: 'true' the outputs aren't
+# compared, a case only has to complete without errors (e.g. compatibility checks against old releases).
 #
 # This is the reusable runner: it only tests images, it never builds or patches them. PRs in this repo
 # go through platform-tests-internal.yml, which builds the images and then calls this workflow.
@@ -68,6 +69,10 @@ on:
       oasislmf_branch:
         description: 'oasislmf for the test client, empty = latest release (the worker is not changed) [git ref]'
         required: false
+      skip_results_check:
+        description: 'Only check that runs complete without errors, do not compare outputs with expected results [true, false]'
+        required: false
+        default: 'false'
       pytest_opts:
         description: 'Extra pytest options [-k <test_name>]'
         required: false
@@ -118,6 +123,10 @@ on:
         description: 'oasislmf for the test client (default: latest release); the worker image is not changed [git ref]'
         required: false
         type: string
+      skip_results_check:
+        description: 'Only check that runs complete without errors, do not compare outputs with expected results (default: false) [true, false]'
+        required: false
+        type: string
       pytest_opts:
         description: 'Extra pytest options'
         required: false
@@ -140,6 +149,7 @@ jobs:
       PLATFORM_DB: ${{ inputs.db || 'postgres' }}
       PLATFORM_STORAGE: ${{ inputs.storage || 'shared-fs' }}
       DEBUG_FLAG: ${{ inputs.debug_mode == '1' && '--platform-debug' || '' }}
+      RESULTS_FLAG: ${{ inputs.skip_results_check == 'true' && '--skip-results-check' || '' }}
 
     steps:
       # Called from another repo, github.ref belongs to the caller, so always check out OasisModels
@@ -179,7 +189,7 @@ jobs:
             --db "$PLATFORM_DB" \
             --storage "$PLATFORM_STORAGE" \
             --platform-logs platform-logs \
-            $DEBUG_FLAG ${{ inputs.pytest_opts }}
+            $DEBUG_FLAG $RESULTS_FLAG ${{ inputs.pytest_opts }}
 
       # container logs and generated stack config (written by the fixture)
       - name: Store platform logs
