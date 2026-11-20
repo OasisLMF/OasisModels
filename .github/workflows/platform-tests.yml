@@ -198,27 +198,35 @@ jobs:
           # ODS_Tools' setup.py lists spec release tags through the GitHub API (rate limited without a token)
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          # The worker image has no git or compiler (and oasislmf has a C extension), so the wheels are
+          # built in a stock python image of the worker's Python version, then installed over the image's
+          # packages (--user, ~/.local comes first on sys.path)
           cat > Dockerfile.patch << 'DOCKERFILE'
           # syntax=docker/dockerfile:1
           ARG BASE_IMAGE
-          FROM ${BASE_IMAGE}
-          USER root
-          RUN apt-get update && apt-get install -y --no-install-recommends git gcc && rm -rf /var/lib/apt/lists/*
-          USER worker
+          ARG PYTHON_VERSION
+
+          FROM python:${PYTHON_VERSION}-slim AS wheels
           ARG OASISLMF_BRANCH
-          RUN pip uninstall oasislmf -y && \
-              pip install --user --no-cache-dir --no-warn-script-location \
-                "oasislmf[extra] @ git+https://github.com/OasisLMF/OasisLMF.git@${OASISLMF_BRANCH}"
           ARG ODS_BRANCH
+          RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
           RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN \
+              pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/OasisLMF/archive/${OASISLMF_BRANCH}.tar.gz" && \
               if [ -n "$ODS_BRANCH" ]; then \
-                pip uninstall ods-tools -y && \
-                pip install --user --no-cache-dir --no-warn-script-location \
-                  "ods-tools @ git+https://github.com/OasisLMF/ODS_Tools.git@${ODS_BRANCH}"; \
+                pip wheel --no-deps -w /wheels "https://github.com/OasisLMF/ODS_Tools/archive/${ODS_BRANCH}.tar.gz"; \
               fi
+
+          FROM ${BASE_IMAGE}
+          RUN --mount=type=bind,from=wheels,source=/wheels,target=/tmp/wheels \
+              pip uninstall oasislmf -y && \
+              if ls /tmp/wheels/ods_tools-*.whl >/dev/null 2>&1; then pip uninstall ods-tools -y; fi && \
+              pip install --user --no-cache-dir --no-warn-script-location \
+                "$(ls /tmp/wheels/oasislmf-*.whl)[extra]" $(ls /tmp/wheels/ods_tools-*.whl 2>/dev/null)
           DOCKERFILE
+          PYTHON_VERSION=$(docker run --rm --entrypoint python "$WORKER_IMAGE" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
           docker build \
             --build-arg BASE_IMAGE="$WORKER_IMAGE" \
+            --build-arg PYTHON_VERSION="$PYTHON_VERSION" \
             --build-arg OASISLMF_BRANCH="$OASISLMF_BRANCH" \
             --build-arg ODS_BRANCH="$ODS_BRANCH" \
             --secret id=github_token,env=GITHUB_TOKEN \
