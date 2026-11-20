@@ -110,6 +110,11 @@ def pytest_addoption(parser):
         help="Run the platform containers with OASIS_DEBUG=1.",
     )
     group.addoption(
+        "--channel-layer", action="store_true", default=False,
+        help="Also start the channel layer (redis). Only needed for server images before 2.5.7, which "
+             "fail without one (newer servers run with OASIS_DISABLE_WORKER_WS).",
+    )
+    group.addoption(
         "--platform-logs", default="platform-logs",
         help="Directory for container logs and downloaded results. Default: ./platform-logs",
     )

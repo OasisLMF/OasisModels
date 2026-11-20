@@ -37,9 +37,11 @@
 #   WORKER_TASK_MAX_RETRIES=2     worker task retries after an error (fixture: 0, fail fast;
 #                                 only takes effect with OasisPlatform#1521)
 #
-# Not included compared to a full platform: websocket (asgi), channel layer (redis), celery-beat.
-# Without a channel layer, websocket status updates are disabled (OASIS_DISABLE_WORKER_WS), which
-# needs server images >= 2.5.7; workers report run progress over HTTP instead (OASIS_ANALYSIS_STATUS_URL).
+# Not included compared to a full platform: websocket (asgi), celery-beat.
+# Websocket status updates from workers are disabled (OASIS_DISABLE_WORKER_WS, server images >= 2.5.7);
+# workers report run progress over HTTP instead (OASIS_ANALYSIS_STATUS_URL).
+# The channel layer (redis) is optional, `--profile channel-layer`: only servers before 2.5.7 need it,
+# they always send queue status through it and fail without one (pytest --channel-layer).
 #
 # Can also be run by hand, e.g.
 #   docker compose -f tests/compose/docker-compose.platform.yml \
@@ -83,7 +85,8 @@ x-server-env: &server-env
   <<: *db-env
   OASIS_URL_SUB_PATH: 0
   OASIS_AWS_LOCATION: oasis/server
-  OASIS_DISABLE_WORKER_WS: "true"     # no channel layer (redis) in this stack
+  OASIS_DISABLE_WORKER_WS: "true"     # no websocket (asgi) service in this stack
+  OASIS_CHANNEL_LAYER_HOST: channel-layer   # only reached when the channel-layer profile is on
 
 # Only one database profile is active; `required: false` skips the other backend's services
 x-server-depends: &server-depends
@@ -101,6 +104,9 @@ x-server-depends: &server-depends
     required: false
   broker:
     condition: service_healthy
+  channel-layer:
+    condition: service_healthy
+    required: false
   s3-create-bucket:
     condition: service_completed_successfully
     required: false
@@ -185,6 +191,15 @@ services:
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
+      retries: 60
+
+  # channel layer for the server's status messages (only needed by servers before 2.5.7, see top)
+  channel-layer:
+    image: redis:7-alpine
+    profiles: ["channel-layer"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
       retries: 60
 
   # S3 emulation (moto, in memory) for STORAGE_TYPE=S3

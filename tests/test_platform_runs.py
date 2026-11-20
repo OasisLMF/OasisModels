@@ -185,6 +185,7 @@ def platform(request, platform_logs):
         db=opt("--db"),
         storage=opt("--storage"),
         debug=opt("--platform-debug"),
+        channel_layer=opt("--channel-layer"),
         work_dir=platform_logs / "config",
     )
     try:
