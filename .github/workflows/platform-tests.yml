@@ -143,12 +143,16 @@ on:
         description: 'Suffix for the uploaded artifact names (to keep parallel calls apart)'
         required: false
         type: string
+      job_name:
+        description: "Name shown for the test job (default: '<api ver>, <db>, <storage>')"
+        required: false
+        type: string
 
 jobs:
   platform-tests:
     runs-on: ubuntu-latest
     # short: callers' job names already say what's tested, this adds the stack it ran on
-    name: ${{ inputs.worker_api_ver || 'v2' }}, ${{ inputs.db || 'postgres' }}, ${{ inputs.storage || 'shared-fs' }}
+    name: ${{ inputs.job_name || format('{0}, {1}, {2}', inputs.worker_api_ver || 'v2', inputs.db || 'postgres', inputs.storage || 'shared-fs') }}
     env:
       SERVER_IMAGE: ${{ inputs.server_image || 'coreoasis/api_server' }}:${{ inputs.server_tag || 'latest' }}
       WORKER_IMAGE: ${{ inputs.worker_image || 'coreoasis/model_worker' }}:${{ inputs.worker_tag || 'latest' }}
