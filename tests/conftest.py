@@ -4,6 +4,8 @@ import shutil
 import warnings
 from pathlib import Path
 
+pytest_plugins = ["tests.azurite_setup"]
+
 import numpy as np
 import pandas as pd
 import pytest
