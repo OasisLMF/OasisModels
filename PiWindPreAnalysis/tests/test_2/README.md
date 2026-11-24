@@ -18,7 +18,7 @@ TypeError: data type 'dictionary<values=large_string, indices=int8, ordered=0>[p
 
 Within one `oasislmf model run` the exposure is passed between steps in memory, so the saved files are never read back. The Oasis platform runs the steps as separate tasks and does read them back. The pre-loss hook reloads them from disk to cover that case.
 
-This test fails until that is fixed (ods-tools 5.0.10, pandas 3.1.0). With `--oed-backend-dtype pd_dtype` it passes, and `expected_results/` comes from that run. The `pd_dtype` and `pa_dtype` loss outputs are expected to be identical.
+This test fails until that is fixed. The dictionary encoding was added in ods-tools 5.0.6 (ODS_Tools #277), and the failure is confirmed with ods-tools 5.0.10 on pandas 3.1.0 and 3.1.1. Older ods-tools (5.0.5 and earlier) don't dictionary-encode, so the test passes with them. With `--oed-backend-dtype pd_dtype` it passes, and `expected_results/` comes from that run. The `pd_dtype` and `pa_dtype` loss outputs are expected to be identical.
 
 ## Reproducing on the command line
 
