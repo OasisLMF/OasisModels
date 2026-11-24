@@ -56,7 +56,7 @@ PLATFORM_DEFAULT_TESTS = [
     "DynamicFootprint/test_1",             # gulmc dynamic footprint
     "PiCyber/test_1",                      # other peril / class of business, accounts-only portfolio
     "PiWindDtype/test_1",                  # 64-bit dtypes (OASIS_INT / OASIS_FLOAT / OASIS_AREAPERIL_TYPE)
-    "PiWindS3/test_1",                     # (skipped at the moment pending a fix) 
+    "PiWindS3/test_1",                     # Test remote S3 Model data
 ]
 SUPPLIER_ID = "OasisLMF"
 ADMIN_USER = "admin"          # set in tests/compose/docker-compose.platform.yml
