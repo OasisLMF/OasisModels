@@ -1,0 +1,5 @@
+{
+    "lookup_config_json": "/home/worker/model/keys_data/lookup_config.json",
+    "lookup_data_dir": "/home/worker/model/keys_data",
+    "model_data_dir": "/home/worker/model/model_data"
+}

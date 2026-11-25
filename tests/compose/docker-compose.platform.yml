@@ -1,0 +1,300 @@
+# Minimal OasisPlatform stack used by tests/test_platform_runs.py
+#
+# Started by testcontainers' DockerCompose with one API profile and one database profile:
+#
+#   API (pick one)
+#     --profile v2   server + v2-worker-monitor (also serves the 'task-controller' queue)
+#     --profile v1   server + v1-worker-monitor
+#   Database (pick one)
+#     --profile postgres   server-db / celery-db on postgres (default)
+#     --profile mysql      server-db / celery-db on mysql, also pass --env-file mysql.env
+#   Storage between server and workers
+#     (none)               shared docker volume /shared-fs (default)
+#     --profile s3         S3 emulated with moto, also pass --env-file s3.env
+#
+# Model workers are not started from this file directly.  Each model that supports
+# platform tests has a `<Model>/docker/worker-container.yml`, which 'extends' the
+# `worker` template below and adds its model id and data mounts.  The fixture
+# passes one of those files per selected model as an extra `-f`.
+#
+# Variables (set by the fixture through an env file, defaults shown):
+#   SERVER_IMG=coreoasis/api_server:latest
+#   WORKER_IMG=coreoasis/model_worker:latest
+#   API_VER=v2
+#   OASIS_DEBUG=0
+#   OASIS_MODELS_ROOT=../..       (repo root, relative to this directory)
+#   SERVER_PORT=0                 (API host port, 0 = random)
+#   database connection (postgres defaults, mysql.env overrides them):
+#   DB_PORT=5432  SERVER_DB_ENGINE=django.db.backends.postgresql_psycopg2
+#   CELERY_DB_ENGINE=db+postgresql+psycopg2  CELERY_DB_SSL_MODE=?sslmode=prefer
+#   storage (shared-fs default, s3.env overrides): STORAGE_TYPE=shared-fs, S3_* unset
+#     (S3_* rather than AWS_* so credentials exported in your shell are never picked up)
+#   process limits (unset = the images' defaults, one celery / gunicorn process per CPU;
+#   only the pytest fixture sets these, see tests/platform_stack.py):
+#   WORKER_CONCURRENCY=           celery processes per model worker
+#   MONITOR_CONCURRENCY=0         celery processes per worker monitor (0 = celery default)
+#   (gunicorn workers on the server are limited by docker-compose.test-limits.yml)
+#   WORKER_TASK_MAX_RETRIES=2     worker task retries after an error (fixture: 0, fail fast;
+#                                 only takes effect with OasisPlatform#1521)
+#
+# Not included compared to a full platform: websocket (asgi), celery-beat.
+# Websocket status updates from workers are disabled (OASIS_DISABLE_WORKER_WS, server images >= 2.5.7);
+# workers report run progress over HTTP instead (OASIS_ANALYSIS_STATUS_URL).
+# The channel layer (redis) is optional, `--profile channel-layer`: only servers before 2.5.7 need it,
+# they always send queue status through it and fail without one (pytest --channel-layer).
+#
+# Can also be run by hand, e.g.
+#   docker compose -f tests/compose/docker-compose.platform.yml \
+#                  -f PiWind/docker/worker-container.yml --profile v2 --profile postgres up -d --wait
+
+x-db-env: &db-env
+  OASIS_DEBUG: ${OASIS_DEBUG:-0}
+  OASIS_CELERY_BROKER_URL: "amqp://rabbit:rabbit@broker:5672"
+  # 1.x workers ignore the broker URL: they build it from these and wait on host:port at startup.
+  # 2.x reads OASIS_CELERY_BROKER_URL first, so these are only a fallback there.
+  OASIS_RABBIT_HOST: broker
+  OASIS_RABBIT_PORT: 5672
+  OASIS_RABBIT_USER: rabbit
+  OASIS_RABBIT_PASS: rabbit
+  OASIS_SERVER_DB_HOST: server-db
+  OASIS_SERVER_DB_PASS: oasis
+  OASIS_SERVER_DB_USER: oasis
+  OASIS_SERVER_DB_NAME: oasis
+  OASIS_SERVER_DB_PORT: ${DB_PORT:-5432}
+  OASIS_SERVER_DB_ENGINE: ${SERVER_DB_ENGINE:-django.db.backends.postgresql_psycopg2}
+  OASIS_CELERY_DB_ENGINE: ${CELERY_DB_ENGINE:-db+postgresql+psycopg2}
+  # no ':' so an empty value (mysql) is kept rather than replaced by the postgres default
+  OASIS_CELERY_DB_SSL_MODE: ${CELERY_DB_SSL_MODE-?sslmode=prefer}
+  OASIS_CELERY_DB_HOST: celery-db
+  OASIS_CELERY_DB_PASS: password
+  OASIS_CELERY_DB_USER: celery
+  OASIS_CELERY_DB_NAME: celery
+  OASIS_CELERY_DB_PORT: ${DB_PORT:-5432}
+  OASIS_TASK_CONTROLLER_QUEUE: task-controller
+  OASIS_INPUT_GENERATION_CONTROLLER_QUEUE: task-controller    # names before 2.3.1
+  OASIS_LOSSES_GENERATION_CONTROLLER_QUEUE: task-controller
+  # storage shared between server and workers (AWS_* settings are only read when STORAGE_TYPE=S3)
+  OASIS_STORAGE_TYPE: ${STORAGE_TYPE:-shared-fs}
+  OASIS_AWS_BUCKET_NAME: ${S3_BUCKET:-}
+  OASIS_AWS_S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+  OASIS_AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+  OASIS_AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+  OASIS_AWS_S3_REGION_NAME: ${S3_REGION:-us-east-1}
+
+x-server-env: &server-env
+  <<: *db-env
+  OASIS_URL_SUB_PATH: 0
+  OASIS_AWS_LOCATION: oasis/server
+  OASIS_DISABLE_WORKER_WS: "true"     # no websocket (asgi) service in this stack
+  OASIS_CHANNEL_LAYER_HOST: channel-layer   # only reached when the channel-layer profile is on
+
+# Only one database profile is active; `required: false` skips the other backend's services
+x-server-depends: &server-depends
+  server-db-postgres:
+    condition: service_healthy
+    required: false
+  celery-db-postgres:
+    condition: service_healthy
+    required: false
+  server-db-mysql:
+    condition: service_healthy
+    required: false
+  celery-db-mysql:
+    condition: service_healthy
+    required: false
+  broker:
+    condition: service_healthy
+  channel-layer:
+    condition: service_healthy
+    required: false
+  s3-create-bucket:
+    condition: service_completed_successfully
+    required: false
+
+volumes:
+  shared-fs:
+
+services:
+  # --------------------------------------------------------------------- #
+  # infrastructure
+  # --------------------------------------------------------------------- #
+  # Databases: services are named per backend, and reached as `server-db` / `celery-db`
+  # through network aliases, so the platform config doesn't change between backends.
+  server-db-postgres:
+    image: postgres:16
+    profiles: ["postgres"]
+    networks:
+      default:
+        aliases: [server-db]
+    environment:
+      POSTGRES_DB: oasis
+      POSTGRES_USER: oasis
+      POSTGRES_PASSWORD: oasis
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "oasis", "-d", "oasis"]
+      interval: 2s
+      retries: 60
+
+  celery-db-postgres:
+    image: postgres:16
+    profiles: ["postgres"]
+    networks:
+      default:
+        aliases: [celery-db]
+    environment:
+      POSTGRES_DB: celery
+      POSTGRES_USER: celery
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "celery", "-d", "celery"]
+      interval: 2s
+      retries: 60
+
+  server-db-mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    networks:
+      default:
+        aliases: [server-db]
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: oasis
+      MYSQL_USER: oasis
+      MYSQL_PASSWORD: oasis
+    healthcheck:
+      # TCP ping: the temporary server mysql runs during init has networking disabled
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "oasis", "-poasis", "--silent"]
+      interval: 2s
+      retries: 90
+
+  celery-db-mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    networks:
+      default:
+        aliases: [celery-db]
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: celery
+      MYSQL_USER: celery
+      MYSQL_PASSWORD: password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "celery", "-ppassword", "--silent"]
+      interval: 2s
+      retries: 90
+
+  broker:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: rabbit
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 60
+
+  # channel layer for the server's status messages (only needed by servers before 2.5.7, see top)
+  channel-layer:
+    image: redis:7-alpine
+    profiles: ["channel-layer"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 60
+
+  # S3 emulation (moto, in memory) for STORAGE_TYPE=S3
+  s3:
+    image: motoserver/moto:5.2.5
+    profiles: ["s3"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/moto-api/', timeout=5)"]
+      interval: 2s
+      retries: 60
+
+  s3-create-bucket:
+    image: motoserver/moto:5.2.5
+    profiles: ["s3"]
+    entrypoint: ["python3", "-c"]
+    command:
+      - |
+        import boto3
+        s3 = boto3.client("s3", endpoint_url="${S3_ENDPOINT_URL:-http://s3:5000}", region_name="${S3_REGION:-us-east-1}",
+                          aws_access_key_id="${S3_ACCESS_KEY_ID:-testing}", aws_secret_access_key="${S3_SECRET_ACCESS_KEY:-testing}")
+        s3.create_bucket(Bucket="${S3_BUCKET:-oasis-bucket}")
+        print("created bucket", "${S3_BUCKET:-oasis-bucket}")
+    depends_on:
+      s3:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------- #
+  # platform
+  # --------------------------------------------------------------------- #
+  server:
+    image: ${SERVER_IMG:-coreoasis/api_server:latest}
+    profiles: ["v1", "v2"]
+    environment:
+      <<: *server-env
+      STARTUP_RUN_MIGRATIONS: "true"
+      OASIS_ADMIN_USER: admin
+      OASIS_ADMIN_PASS: password
+    ports:
+      - "${SERVER_PORT:-0}:8000"   # 0 = random host port (test fixture looks it up); PiWind/.env sets 8000
+    volumes:
+      - shared-fs:/shared-fs:rw
+    depends_on: *server-depends
+    healthcheck:
+      # the api_server image has no shell or curl
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthcheck/', timeout=5)"]
+      interval: 3s
+      retries: 100
+
+  v1-worker-monitor:
+    image: ${SERVER_IMG:-coreoasis/api_server:latest}
+    profiles: ["v1"]
+    command: [celery, -A, src.server.oasisapi.celery_app_v1, worker, --loglevel=INFO, -Q, celery,
+              "--concurrency=${MONITOR_CONCURRENCY:-0}"]
+    environment: *server-env
+    volumes:
+      - shared-fs:/shared-fs:rw
+    depends_on: *server-depends
+
+  v2-worker-monitor:
+    image: ${SERVER_IMG:-coreoasis/api_server:latest}
+    profiles: ["v2"]
+    # also consumes the 'task-controller' queue, replacing a separate v2-task-controller
+    command: [celery, -A, src.server.oasisapi.celery_app_v2, worker, --loglevel=INFO, -Q, "celery-v2,task-controller",
+              "--concurrency=${MONITOR_CONCURRENCY:-0}"]
+    environment: *server-env
+    volumes:
+      - shared-fs:/shared-fs:rw
+    depends_on: *server-depends
+
+  # --------------------------------------------------------------------- #
+  # model worker template (never started directly)
+  #   <Model>/docker/worker-container.yml `extends` this and adds:
+  #     profiles: ["v1", "v2"]
+  #     OASIS_MODEL_ID, OASIS_MODEL_SETTINGS_FILE
+  #     volumes: model data + /home/worker/model/oasislmf.json
+  # --------------------------------------------------------------------- #
+  worker:
+    image: ${WORKER_IMG:-coreoasis/model_worker:latest}
+    profiles: ["worker-template"]
+    environment:
+      <<: *db-env
+      OASIS_AWS_LOCATION: oasis/worker
+      OASIS_MODEL_SUPPLIER_ID: OasisLMF
+      OASIS_MODEL_VERSION_ID: ${API_VER:-v2}
+      OASIS_RUN_MODE: ${API_VER:-v2}
+      # run progress (gulmc/gulpy event counts) POSTed over HTTP by oasislmf instead of the
+      # websocket: the server's unauthenticated `analysis-status/` endpoint on the compose network
+      OASIS_ANALYSIS_STATUS_URL: "http://server:8000/analysis-status/"
+      # empty = no --concurrency flag (startup.sh), so celery starts one process per CPU
+      OASIS_CELERY_CONCURRENCY: ${WORKER_CONCURRENCY:-}
+      # automatic retries of a failed task (platform default 2; 0 = fail fast). Never empty:
+      # the worker parses it as an int. Read by workers with OasisPlatform#1521, ignored before.
+      OASIS_WORKER_TASK_MAX_RETRIES: ${WORKER_TASK_MAX_RETRIES:-2}
+    volumes:
+      - shared-fs:/shared-fs:rw
+    depends_on:
+      server:
+        condition: service_healthy

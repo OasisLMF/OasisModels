@@ -1,0 +1,22 @@
+# UKWind model worker for the platform integration tests (tests/test_platform_runs.py)
+#
+# Extends the `worker` template in tests/compose/docker-compose.platform.yml, which must be
+# the first compose file. Relative paths here resolve against that file's directory
+# (tests/compose), so model paths use OASIS_MODELS_ROOT (default: the repo root).
+#
+# Run by hand: see UKWind/docker-compose.yml (`cd UKWind && docker compose up -d --wait`)
+
+services:
+  worker-ukwind:
+    extends:
+      file: docker-compose.platform.yml
+      service: worker
+    profiles: ["v1", "v2"]
+    environment:
+      OASIS_MODEL_ID: UKWind
+      OASIS_MODEL_SETTINGS_FILE: /home/worker/model/meta_data/model_settings.json
+    volumes:
+      - ${OASIS_MODELS_ROOT:-../..}/UKWind/keys_data:/home/worker/model/keys_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/UKWind/meta_data:/home/worker/model/meta_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/UKWind/model_data:/home/worker/model/model_data:ro
+      - ${OASIS_MODELS_ROOT:-../..}/UKWind/docker/oasislmf.json:/home/worker/model/oasislmf.json:ro

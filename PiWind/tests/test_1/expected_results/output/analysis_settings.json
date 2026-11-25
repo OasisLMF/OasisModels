@@ -35,8 +35,6 @@
             }
         }
     ],
-    "ri_output": false,
-    "ri_summaries": [],
     "lookup_settings": {
         "supported_perils": [
             {
@@ -65,6 +63,8 @@
         ]
     },
     "model_default_samples": 10,
+    "ri_output": false,
+    "ri_summaries": [],
     "rl_output": false,
     "rl_summaries": []
 }
