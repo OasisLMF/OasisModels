@@ -55,6 +55,7 @@ PLATFORM_DEFAULT_TESTS = [
     "PiWindPostLossAmplification/test_1",  # post loss amplification
     "DynamicFootprint/test_1",             # gulmc dynamic footprint
     "PiCyber/test_1",                      # other peril / class of business, accounts-only portfolio
+    "PiCyberPreAnalysis/test_1",           # pre/post-analysis hooks, files written by the pre-analysis hook (OasisPlatform#1532)
     "PiWindDtype/test_1",                  # 64-bit dtypes (OASIS_INT / OASIS_FLOAT / OASIS_AREAPERIL_TYPE)
     "PiWindS3/test_1",                     # Test remote S3 Model data
 ]

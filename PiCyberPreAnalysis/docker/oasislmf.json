@@ -1,0 +1,8 @@
+{
+    "lookup_config_json": "/home/worker/model/keys_data/lookup_config.json",
+    "lookup_data_dir": "/home/worker/model/keys_data",
+    "model_data_dir": "/home/worker/model/model_data",
+    "exposure_pre_analysis_module": "/home/worker/model/src/exposure_modification/exposure_pre_analysis_revenue.py",
+    "exposure_pre_analysis_setting_json": "/home/worker/model/exposure_pre_analysis.json",
+    "post_analysis_module": "/home/worker/model/src/post_analysis/check_pre_analysis_files.py"
+}
