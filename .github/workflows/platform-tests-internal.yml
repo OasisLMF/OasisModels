@@ -2,7 +2,7 @@
 # workflow_call trigger. Repos testing their own images call platform-tests.yml instead.
 #
 # Builds the images to test, then runs them with platform-tests.yml:
-#   1. resolve         OasisPlatform `platform_branch`, oasislmf `oasislmf_branch` (default: main) and
+#   1. resolve         OasisPlatform `platform_branch`, oasislmf `oasislmf_branch` (default: fix/cyber-reins-crash) and
 #                      optionally ODS_Tools `ods_branch` to commits, and work out which images already exist
 #   2. build-platform  server + worker images from that OasisPlatform commit with OasisPlatform's
 #                      build-images.yml -> coreoasis/github-actions:{api_server,model_worker}-<platform sha>
@@ -32,7 +32,7 @@ on:
       oasislmf_branch:
         description: 'oasislmf for the patched worker and test client [git ref]'
         required: false
-        default: 'main'
+        default: 'fix/cyber-reins-crash'
       ods_branch:
         description: 'ODS_Tools for the patched worker, empty = the version oasislmf installs [git ref]'
         required: false
@@ -82,7 +82,7 @@ jobs:
         id: resolve
         env:
           PLATFORM_BRANCH: ${{ inputs.platform_branch || 'main' }}
-          OASISLMF_REF: ${{ inputs.oasislmf_branch || 'main' }}
+          OASISLMF_REF: ${{ inputs.oasislmf_branch || 'fix/cyber-reins-crash' }}
           ODS_REF: ${{ inputs.ods_branch }}
           HAVE_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
           IMAGE_REPO: coreoasis/github-actions
