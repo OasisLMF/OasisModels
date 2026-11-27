@@ -1,0 +1,22 @@
+# DynamicFootprint on the minimal OasisPlatform test stack
+#
+# Combines the shared platform stack with DynamicFootprint's model worker:
+#   ../tests/compose/docker-compose.platform.yml   server, databases, broker, worker monitor
+#   docker/worker-container.yml                    DynamicFootprint model worker
+#
+# From this directory (profiles v2 + postgres are the default, set in .env):
+#   docker compose up -d --wait
+#   API_VER=v1 COMPOSE_PROFILES=v1,postgres docker compose up -d --wait   # v1 API / worker mode
+#   COMPOSE_PROFILES=v2,mysql docker compose --env-file .env \
+#       --env-file ../tests/compose/mysql.env up -d --wait                # mysql instead of postgres
+#   COMPOSE_PROFILES=v2,postgres,s3 docker compose --env-file .env \
+#       --env-file ../tests/compose/s3.env up -d --wait                   # S3 (moto) instead of shared-fs
+#   docker compose down -v
+#
+# Images: SERVER_IMG / WORKER_IMG (default coreoasis/api_server:latest, coreoasis/model_worker:latest)
+# API: http://localhost:8000 (SERVER_PORT in .env; set SERVER_PORT=0 for a random port)
+
+include:
+  - path:
+      - ../tests/compose/docker-compose.platform.yml
+      - docker/worker-container.yml

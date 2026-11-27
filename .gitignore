@@ -103,6 +103,8 @@ celerybeat.pid
 
 # Environments
 .env
+# ...except model compose defaults, e.g. PiWind/.env (COMPOSE_PROFILES, no secrets)
+!/*/.env
 .venv
 env/
 venv/

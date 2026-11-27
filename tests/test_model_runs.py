@@ -15,7 +15,6 @@ or to run everything::
 """
 
 import subprocess
-from pathlib import Path
 import json
 import os
 
@@ -23,65 +22,8 @@ import pytest
 
 from tests.conftest import apply_results_flags
 
-# ---------------------------------------------------------------------------
-# Config discovery
-# ---------------------------------------------------------------------------
+from tests.model_discovery import AZURITE_MODELS, _SKIP_REASONS, _collect_test_configs, _param_id
 
-REPO_ROOT = Path(__file__).parent.parent
-
-# List of ordered models to run after collected models
-ORDERED_MODELS = [
-        "PiWindDtype"
-    ]
-
-# Models to skip, as (model_name, reason) tuples
-SKIP_MODELS = [
-    ("PiWindDtype", 'Test is flanky when running from oasislmf -- skip until fixed'),
-    ("PiWindAzure", "requires Azure cloud credentials"),
-    ("PiWindPreAnalysis", "needs access to an external API call, precisely"),
-    ("ComplexModelAPI", "custom gulcalc binary not installed in CI; model needs update for oasislmf 2.5.x GULMC compatibility"),
-    ("UKWind", "requires large model data from S3 (run get_large_data.sh first)"),
-]
-
-_SKIP_REASONS = {name: reason for name, reason in SKIP_MODELS}
-
-
-def _collect_test_configs():
-    """
-    Walk all ``<Model>/tests/test_N/oasislmf.json`` files and yield
-    ``(model_name, test_name, abs_config_path)`` triples.
-    """
-    model_dirs = sorted(REPO_ROOT.iterdir())
-    unordered_model_dirs = []
-    ordered_model_dirs = []
-    for m in model_dirs:
-        if not m.is_dir() or m.name.startswith("."):
-            continue
-        if m.name in ORDERED_MODELS:
-            ordered_model_dirs.append(m)
-        else:
-            unordered_model_dirs.append(m)
-
-
-    model_dirs = unordered_model_dirs + ordered_model_dirs
-
-    for model_dir in model_dirs:
-        tests_dir = model_dir / "tests"
-        if not tests_dir.is_dir():
-            continue
-
-        for test_dir in sorted(tests_dir.iterdir()):
-            config = test_dir / "oasislmf.json"
-            env_file = test_dir / "env.json"
-            if not env_file.is_file():
-                env_file = None
-
-            if config.is_file():
-                yield model_dir.name, test_dir.name, config, env_file
-
-
-def _param_id(model_name, test_name):
-    return f"{model_name}/{test_name}"
 
 
 def _build_params():
@@ -95,6 +37,7 @@ def _build_params():
             marks.append(pytest.mark.skip(reason=_SKIP_REASONS[skip_key]))
 
         test_config = {
+                "model_name": model_name,
                 "config_path": config_path,
                 "env_path": env_path
                 }
@@ -114,8 +57,11 @@ def _build_params():
 
 
 @pytest.mark.parametrize("test_config", _build_params())
-def test_model_run(test_config, tmp_path, check_results, update_results):
+def test_model_run(test_config, tmp_path, check_results, update_results, request):
     """Run ``oasislmf model run`` for the given config and assert it succeeds."""
+    if test_config["model_name"] in AZURITE_MODELS:
+        request.getfixturevalue("azurite_service")
+
     run_dir = tmp_path / "run"
     config_path = test_config["config_path"]
     env_path = test_config.get("env_path", None)

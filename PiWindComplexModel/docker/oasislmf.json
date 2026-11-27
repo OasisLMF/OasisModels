@@ -1,0 +1,11 @@
+{
+    "lookup_data_dir": "/home/worker/model/keys_data",
+    "lookup_module_path": "/home/worker/model/complex_model_wrapper/PiWindComplexModelKeysLookup.py",
+    "model_data_dir": "/home/worker/model/model_data",
+    "model_version_csv": "/home/worker/model/keys_data/ModelVersion.csv",
+    "model_package_dir": "/home/worker/model/src/model_execution_worker",
+    "gulpy": false,
+    "gulmc": false,
+    "modelpy": false,
+    "model_custom_gulcalc": "OasisLMF_ComplexModelExample_gulcalc"
+}
