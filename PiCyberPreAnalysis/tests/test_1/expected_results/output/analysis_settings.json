@@ -14,8 +14,26 @@
             }
         }
     ],
-    "ri_output": false,
-    "ri_summaries": [],
+    "il_output": true,
+    "il_summaries": [
+        {
+            "id": 1,
+            "ord_output": {
+                "elt_moment": true,
+                "alt_period": true
+            }
+        }
+    ],
+    "ri_output": true,
+    "ri_summaries": [
+        {
+            "id": 1,
+            "ord_output": {
+                "elt_moment": true,
+                "alt_period": true
+            }
+        }
+    ],
     "rl_output": false,
     "rl_summaries": []
 }
