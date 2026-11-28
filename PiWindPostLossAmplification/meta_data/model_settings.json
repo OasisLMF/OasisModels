@@ -17,6 +17,16 @@
             ]
         }
      },
+    "computation_settings":{
+        "boolean_parameters":[
+            {
+                "name": "pla",
+                "desc": "Apply Post Loss Amplification",
+                "tooltip": "Multiply ground up losses by the model's post loss amplification factors",
+                "default": true
+            }
+        ]
+    },
     "lookup_settings":{
         "supported_perils":[
            {"id": "WSS", "desc": "Single Peril: Storm Surge"},
